@@ -14,7 +14,7 @@ class Minimize(object):
     """
     Class that defines the optomization method that we will be using.
     """
-    def __init__(self, x0, crystal, cost, mode=0, constraints={}, gmax=3.01, gmeParams={}, phcParams={}, tol=None):
+    def __init__(self, x0, crystal, cost, mode=0, constraints={}, gmax=4.01, gmeParams={}, phcParams={}, tol=None):
         """
         Initalizes the class with all relevent general perameters
 
