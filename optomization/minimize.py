@@ -7,7 +7,7 @@ import types
 from collections.abc import Iterable
 import legume
 import optomization
-from autograd import grad
+from autograd import grad, hessian
 
 
 class Minimize(object):

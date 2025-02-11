@@ -77,7 +77,7 @@ def worker_function(input):
     cost = optomization.Backscatter()
     ks = npa.linspace(npa.pi*.5,npa.pi,25)
 
-    gmeParams = {'verbose':False,'numeig':21,'compute_im':False,'kpoints':npa.array([[int(ks[8])],[0]])}
+    gmeParams = {'verbose':False,'numeig':21,'compute_im':False,'kpoints':npa.array([[float(ks[8])],[0]])}
     vars = W1Vars(key=input['key'])
     
     #define constraints
@@ -89,16 +89,19 @@ def worker_function(input):
                                             gmax=2.01,
                                             mode=20)
     
-    manager.add_inside_unit_cell('Inside',.5)
-    manager.add_rad_bound('minimumRadius',.15,.42)
-    manager.add_min_dist('minDist',40/266,3,W1Vars(NyChange=3+3))
-    manager.add_gme_constrs('gme_constrs',minFreq=.26,maxFreq=.28,ksBefore=[float(ks[4]),float(ks[6])],ksAfter=[float(ks[14]),float(ks[20])],bandwidth=.005,slope='down')
+    manager.add_inside_unit_cell('Inside',.15)
+    manager.add_rad_bound('minimumRadius',.15,.4)
+    #manager.add_min_dist('minDist',40/266,3,W1Vars(NyChange=3+3))
+    manager.add_gme_constrs_complex('gme_constrs',minFreq=.26,maxFreq=.28,ksBefore=[float(ks[6])],ksAfter=[float(ks[14]),float(ks[20])],bandwidth=.005,slope='down')
     
     #run minimization
-    minim = optomization.TrustConstr(vars,W1,cost,mode=20,maxiter=2,gmeParams=gmeParams,constraints=manager,path=input['path'],xtol=1e-3)
+    tcParams = {'xtol':1e-4,'initial_tr_radius':.1}
+    minim = optomization.TrustConstr(vars,W1,cost,mode=20,maxiter=400,gmeParams=gmeParams,constraints=manager,path=input['path'],**tcParams)
     minim.minimize()
     minim.save(input['path'])
 #%%
-input = {'path':f"media/opt0.json",'key':0}
-minim = worker_function(input)  # Compute the result
+if __name__=='__main__':
+    for i in range(300):
+        input = {'path':f"tests/media/nonlinopt{i}.json",'key':i}
+        minim = worker_function(input)  # Compute the result
 # %%
