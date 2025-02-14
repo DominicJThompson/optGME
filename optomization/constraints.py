@@ -305,8 +305,8 @@ class ConstraintManager(object):
 
 
         self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._gme_constrs_complex,(ksBefore,ksAfter,bandwidth,slope)),
-                                                     np.array([minFreq,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]),
-                                                     np.array([maxFreq,0,0,0,0,0]),
+                                                     np.array([minFreq,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]),
+                                                     np.array([maxFreq,0,0,0,0,0,0]),
                                                      jac=self._wrap_grad(jacobian(self._gme_constrs_complex),(ksBefore,ksAfter,bandwidth,slope)))
         self.constraintsDisc[name] = {
             'discription': """implements the folowing constraints: freq_bound, ng_bound, monotonic_band, bandwidth, and ng sign constraints on either side """,
