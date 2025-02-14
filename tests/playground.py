@@ -72,7 +72,7 @@ def W1Vars(NyChange=3,ra=.3,key=None):
 with open("/Users/dominic/Desktop/optGME/tests/media/nonlinopt0.json", "r") as file:
     data = json.load(file)
 
-vars = np.array(data[26]['x_values'])
+vars = np.array(data[52]['x_values'])
 #%%
 ks = npa.linspace(npa.pi*.5,npa.pi,25)
 
@@ -175,4 +175,11 @@ plt.plot(gme.freqs[:,15:25])
 ks = npa.linspace(npa.pi*.5,npa.pi,25)
 print(ks[4],ks[6],ks[8],ks[12],ks[20])
 # %%
+final = []
+for i in range(15):
+    with open(f"/Users/dominic/Desktop/optGME/tests/media/nonlinopt{i}.json", "r") as file:
+        data = json.load(file)
+    final.append(data[-1]['result']['fun'])
 
+plt.plot(np.array(final).T,'o')
+# %%

@@ -91,7 +91,7 @@ def worker_function(input):
     
     manager.add_inside_unit_cell('Inside',.15)
     manager.add_rad_bound('minimumRadius',.15,.4)
-    #manager.add_min_dist('minDist',40/266,3,W1Vars(NyChange=3+3))
+    manager.add_min_dist('minDist',40/266,3,W1Vars(NyChange=3+3))
     manager.add_gme_constrs_complex('gme_constrs',minFreq=.26,maxFreq=.28,ksBefore=[float(ks[6])],ksAfter=[float(ks[14]),float(ks[20])],bandwidth=.005,slope='down')
     
     #run minimization

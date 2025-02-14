@@ -89,7 +89,7 @@ class ConstraintManager(object):
         return wrapped
     
     def build_bounds(self):
-        return(Bounds(self.lowerBounds,self.upperBounds,keep_feasible=True))
+        return(Bounds(self.lowerBounds,self.upperBounds))
 
     #------------default constraints to add-------------
         
@@ -139,11 +139,10 @@ class ConstraintManager(object):
             for j in range(buffer):
                 if i+j+1<buffer: #if hole is looking at another hole that doesn't move
                     continue
-                self.constraints[name+str(i)+'_'+str(j+1)] = {
-                    'type': 'ineq',
-                    'fun': self._wrap_function(self._min_dist,(minDist,i,j+1,buffer,varsPadded)),
-                    'jac': self._wrap_grad(grad(self._min_dist),(minDist,i,j+1,buffer,varsPadded))
-                }
+                self.constraints[name] = NonlinearConstraint(self._wrap_function(self._min_dist,(minDist,i,j+1,buffer,varsPadded)),
+                                                             minDist,
+                                                             np.inf,
+                                                             jac = self._wrap_grad(grad(self._min_dist),(minDist,i,j+1,buffer,varsPadded)))
         self.constraintsDisc[name] = {
             'discription': """Enforces a minimum radius between the holes within a buffer number of holes""",
             'args': {'minDist': minDist, 'buffer': buffer},
@@ -340,7 +339,7 @@ class ConstraintManager(object):
         #distance between the holes
         dist = bd.sqrt((xi-xj)**2+(yi-yj)**2)-rj-ri
 
-        return(minDist-dist)
+        return(dist)
 
     def _freq_bound(self,x,minFreq,maxFreq):
 
