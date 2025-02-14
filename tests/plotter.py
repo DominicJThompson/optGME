@@ -69,8 +69,65 @@ def W1Vars(NyChange=3,ra=.3,key=None):
 
     return(vars)
 
-def runSims(xs,params):
-    phc = W1(xs)
+
+def ZIW(vars=npa.zeros((0,0)),NyChange=3,Ny=10,dslab=170/266,eps_slab=3.4638,r0=.105,r1=.235):
+
+    vars = vars.reshape((3,NyChange*2*2))
+
+    lattice = legume.Lattice(npa.array([1,0]),npa.array([0,Ny*npa.sqrt(3)-.25]))
+
+    #now we define a photonic crystal that goes over our lattice and add the one layer of our W1 waveguide
+    phc = legume.PhotCryst(lattice)
+    phc.add_layer(d=dslab,eps_b=eps_slab**2)
+
+    for i in range(vars.shape[1]):
+        phc.add_shape(legume.Circle(x_cent=vars[0,i],y_cent=vars[1,i],r=vars[2,i]))
+
+    #now we want to add the air holes to our photonic crystal to make it the W1 waveguide we do this in a loop
+    flip = False
+    for i in range(Ny*2):
+        iy = i-Ny+1
+        y = iy*npa.sqrt(3)/2-npa.sqrt(3)/12
+
+        if np.abs(iy-.5)<=NyChange:
+            continue
+
+        if iy>0 and not flip:
+            r0, r1 = r1, r0
+            flip = True
+        
+        #add hole below and above
+        phc.add_shape(legume.Circle(x_cent=.5*((iy+1)%2),y_cent=y-npa.sqrt(3)/6,r=r1))
+        phc.add_shape(legume.Circle(x_cent=.5*(iy%2),y_cent=y,r=r0))
+    
+    return(phc)
+
+
+def ZIWVars(NyChange=3,r0=.105,r1=.235,key=None):
+    vars = npa.zeros((3,NyChange*2*2))
+    flip = False
+    for i in range(NyChange*2):
+
+        iy = i-NyChange+1
+        y = iy*npa.sqrt(3)/2-npa.sqrt(3)/12
+
+        if iy>0 and not flip:
+            r0, r1 = r1, r0
+            flip = True
+        
+        vars[0,2*i],vars[0,2*i+1] = .5*((iy+1)%2),.5*(iy%2)
+        vars[1,2*i],vars[1,2*i+1] = y-npa.sqrt(3)/6, y
+        vars[2,2*i],vars[2,2*i+1] = r1,r0
+
+    vars = vars.flatten()
+    if key is not None:
+        np.random.seed(key)
+        vars += np.random.normal(loc=0,scale=1/266,size=vars.size)
+
+    return(vars)
+
+def runSims(xs,crystal,params):
+    phc = crystal(xs)
 
     kmin,kmax = .5*np.pi,np.pi
     gmeParams = params['gmeParams'].copy()
@@ -174,10 +231,11 @@ def alphaImprove(alpha,alphaOG,params):
 
 def filedPlots(phc,phcOG,gme,gmeOG,params):
     #set up variables
-    ylim= 8*np.sqrt(3)/2
+    ylim= 10*np.sqrt(3)/2
     ys = np.linspace(-ylim/2,ylim/2,300)
     mode = params['mode']
     kindex = np.abs(gme.kpoints[0,:] - params['gmeParams']['kpoints'][0][0]).argmin()
+    kindex = 190
     z = phc.layers[0].d/2
 
     #get field of original crystal
@@ -219,31 +277,20 @@ def filedPlots(phc,phcOG,gme,gmeOG,params):
 
 
 #%%
-with open('/Users/dominic/Desktop/optGME/tests/media/nonlinopt32.json','r') as file:
+with open('/Users/dominic/Desktop/optGME/tests/media/ziwOptBasic0.json','r') as file:
     out = json.load(file)
 
-phc,gme,alphas,ng = runSims(np.array(out[-1]['result']['x']),out[-1])
-phcOG,gmeOG,alphasOG,ngOG = runSims(W1Vars(),out[-1]) 
+phc,gme,alphas,ng = runSims(np.array(out[-1]['result']['x']),ZIW,out[-1])
+phcOG,gmeOG,alphasOG,ngOG = runSims(ZIWVars(),ZIW,out[-1]) 
 
 #%%
 plotBands(gme,ng,out[-1])
 plotBands(gmeOG,ngOG,out[-1],color='green')
 
 #%%
-    
+     
 alphaImprove(alphas,alphasOG,out[-1])
 #%%
 filedPlots(phc,phcOG,gme,gmeOG,out[-1])
 
-#%%
-filedPlots(phc,phcOG,gme,gmeOG,out[-1])
-# %%
-print(np.log10(alphas[66]))
-print(np.log10(alphasOG[66]))
-print(alphas[66]/266/1E-7/(alphasOG[66]/266/1E-7))
-# %% 
-#%%
-0.0004673460766618901*7.716625423762982**2
-# %%
-0.005045916208333005*6.822117123068426**2
 # %%

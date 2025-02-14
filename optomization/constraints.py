@@ -139,7 +139,7 @@ class ConstraintManager(object):
             for j in range(buffer):
                 if i+j+1<buffer: #if hole is looking at another hole that doesn't move
                     continue
-                self.constraints[name] = NonlinearConstraint(self._wrap_function(self._min_dist,(minDist,i,j+1,buffer,varsPadded)),
+                self.constraints[name+str(i)+str(j)] = NonlinearConstraint(self._wrap_function(self._min_dist,(minDist,i,j+1,buffer,varsPadded)),
                                                              minDist,
                                                              np.inf,
                                                              jac = self._wrap_grad(grad(self._min_dist),(minDist,i,j+1,buffer,varsPadded)))
