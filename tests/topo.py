@@ -140,11 +140,11 @@ def worker_function(input):
     ks = npa.linspace(npa.pi*.5,npa.pi,25)
 
     gmeParams = {'verbose':False,'numeig':21,'compute_im':False,'kpoints':npa.array([[float(ks[12])],[0]])}
-    vars = ZIWVars(NyChange=3,key=None)
+    vars = ZIWVars(NyChange=3,key=input['key'])
     
     #define constraints
     manager = optomization.ConstraintManager(x0=vars,
-                                            numberHoles=3,
+                                            numberHoles=12,
                                             crystal=ZIW,
                                             phcParams={},
                                             gmeParams=gmeParams,
@@ -153,7 +153,7 @@ def worker_function(input):
     
     manager.add_inside_unit_cell('Inside',.5)
     manager.add_rad_bound('minimumRadius',27.5/266,.35)
-    manager.add_min_dist('minDist',40/266,3,ZIWVars(NyChange=3+3))
+    manager.add_min_dist('minDist',40/266,3)
     manager.add_gme_constrs_complex('gme_constrs',minFreq=.25,maxFreq=.27,ksBefore=[float(ks[3]),float(ks[6])],ksAfter=[float(ks[16]),float(ks[24])],bandwidth=.005,slope='down')
 
     #the eigenvalue of interest changes depending on gmax: gmax=2.01, eig=19 but gmax=4.01, eig=20
