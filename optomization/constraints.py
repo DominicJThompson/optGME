@@ -134,8 +134,8 @@ class ConstraintManager(object):
         """
         nH = self.defaultArgs['numberHoles']
         self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._min_dist,(buffer,)),
-                                                     np.ones(nH)*minDist,
-                                                     np.ones(nH)*(-np.inf),
+                                                     -np.inf,
+                                                     minDist,
                                                      jac=self._wrap_grad(jacobian(self._min_dist),(buffer,)))
         
         #change bounds on edges so the y value doesn't become too large or small 
