@@ -110,16 +110,15 @@ plt.rcParams.update({
     'legend.fontsize': 12,
 })
 
-# Convergence plots for ng8 vs different parameters
+# Convergence plots for ng8
 fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-fig.suptitle('Percent Change in ng8 with Different Parameters', fontsize=22)
+fig.suptitle('ng8 Convergence Analysis', fontsize=22)
 
-# Plot ng8 vs gmax for each gmode
+# Plot ng8 vs gmax for each gmode (top left)
 for gmode in unique_gmodes:
     marker = gmode_markers[gmode]
-    for Nx in unique_Nxs:
-        linestyle = Nx_linestyles[Nx]
-        for Ny in unique_Nys:
+    for Nx in [min(unique_Nxs)]:  # Use only minimum Nx for cleaner plot
+        for Ny in [min(unique_Nys)]:  # Use only minimum Ny for cleaner plot
             gmaxs = []
             ng8s = []
             for k in output:
@@ -130,15 +129,13 @@ for gmode in unique_gmodes:
                     ng8s.append(output[k]['ng8'])
             if gmaxs:
                 pct_change = calc_percent_change(ng8s, baseline_ng8)
-                axes[0, 0].plot(gmaxs, pct_change, marker=marker, linestyle=linestyle, 
-                               alpha=Ny_alphas[Ny], markersize=12, linewidth=2)
+                axes[0, 0].plot(gmaxs, pct_change, marker=marker, linestyle='-', 
+                              markersize=10, linewidth=2, label=f'gmode={list(gmode)}')
 
-# Plot ng8 vs Nx for each gmode and gmax
-for gmode in unique_gmodes:
-    marker = gmode_markers[gmode]
-    for gmax in unique_gmaxs:
-        color = gmax_colors[gmax]
-        for Ny in unique_Nys:
+# Plot ng8 vs Nx for each Ny (top right)
+for Ny in unique_Nys:
+    for gmode in [min(unique_gmodes, key=lambda x: len(x))]:  # Use only minimum gmode
+        for gmax in [min(unique_gmaxs)]:  # Use only minimum gmax
             Nxs = []
             ng8s = []
             for k in output:
@@ -149,84 +146,77 @@ for gmode in unique_gmodes:
                     ng8s.append(output[k]['ng8'])
             if Nxs:
                 pct_change = calc_percent_change(ng8s, baseline_ng8)
-                axes[0, 1].plot(Nxs, pct_change, marker=marker, color=color, 
-                               alpha=Ny_alphas[Ny], markersize=12, linewidth=2)
+                axes[0, 1].plot(Nxs, pct_change, marker='o', linestyle='-', 
+                              markersize=10, linewidth=2, label=f'Ny={Ny}')
 
-# Plot ng8 vs Ny for each gmode and gmax
+# Computation time analysis (bottom row)
+# Plot computation time vs gmax for each gmode (bottom left)
 for gmode in unique_gmodes:
     marker = gmode_markers[gmode]
-    for gmax in unique_gmaxs:
-        color = gmax_colors[gmax]
-        for Nx in unique_Nxs:
-            Nys = []
-            ng8s = []
+    for Nx in [min(unique_Nxs)]:  # Use only minimum Nx
+        for Ny in [min(unique_Nys)]:  # Use only minimum Ny
+            gmaxs = []
+            times = []
+            for k in output:
+                if (tuple(output[k]['gmode']) == gmode and 
+                    output[k]['Nx'] == Nx and 
+                    output[k]['Ny'] == Ny):
+                    gmaxs.append(output[k]['gmax'])
+                    times.append(output[k]['time'])
+            if gmaxs:
+                axes[1, 0].plot(gmaxs, times, marker=marker, linestyle='-', 
+                              markersize=10, linewidth=2, label=f'gmode={list(gmode)}')
+
+# Plot computation time vs Nx for each Ny (bottom right)
+for Ny in unique_Nys:
+    for gmode in [min(unique_gmodes, key=lambda x: len(x))]:  # Use only minimum gmode
+        for gmax in [min(unique_gmaxs)]:  # Use only minimum gmax
+            Nxs = []
+            times = []
             for k in output:
                 if (tuple(output[k]['gmode']) == gmode and 
                     output[k]['gmax'] == gmax and 
-                    output[k]['Nx'] == Nx):
-                    Nys.append(output[k]['Ny'])
-                    ng8s.append(output[k]['ng8'])
-            if Nys:
-                pct_change = calc_percent_change(ng8s, baseline_ng8)
-                axes[1, 0].plot(Nys, pct_change, marker=marker, color=color, 
-                               linestyle=Nx_linestyles[Nx], markersize=12, linewidth=2)
+                    output[k]['Ny'] == Ny):
+                    Nxs.append(output[k]['Nx'])
+                    times.append(output[k]['time'])
+            if Nxs:
+                axes[1, 1].plot(Nxs, times, marker='o', linestyle='-', 
+                              markersize=10, linewidth=2, label=f'Ny={Ny}')
 
-# Plot ng8 vs computation time
-times = []
-ng8s = []
-for k in output:
-    times.append(output[k]['time'])
-    ng8s.append(output[k]['ng8'])
-axes[1, 1].scatter(times, ng8s, c='black', alpha=0.7, s=100)
-
-# Add compact legend for plot identifiers
-gmode_legend_elements = [plt.Line2D([0], [0], marker=marker, color='black', label=f'gmode={list(gmode)}', 
-                        linestyle='', markersize=12) for gmode, marker in gmode_markers.items()]
-gmax_legend_elements = [plt.Line2D([0], [0], color=color, label=f'gmax={gmax}', 
-                       linestyle='-', linewidth=2, markersize=12) for gmax, color in gmax_colors.items()]
-Nx_legend_elements = [plt.Line2D([0], [0], color='black', label=f'Nx={Nx}', 
-                     linestyle=style, linewidth=2, markersize=12) for Nx, style in Nx_linestyles.items()]
-Ny_legend_elements = [plt.Line2D([0], [0], color='black', label=f'Ny={Ny}', 
-                     linestyle='-', linewidth=2, alpha=alpha, markersize=12) for Ny, alpha in Ny_alphas.items()]
-
-# Add legends to each subplot
-axes[0, 0].legend(handles=gmode_legend_elements + Nx_legend_elements + Ny_legend_elements, 
-                 loc='best', fontsize='medium', ncol=2)
-axes[0, 1].legend(handles=gmode_legend_elements + gmax_legend_elements + Ny_legend_elements, 
-                 loc='best', fontsize='medium', ncol=2)
-axes[1, 0].legend(handles=gmode_legend_elements + gmax_legend_elements + Nx_legend_elements, 
-                 loc='best', fontsize='medium', ncol=2)
-
+# Add annotations and labels
 axes[0, 0].set_xlabel('gmax')
 axes[0, 0].set_ylabel('ng8 percent change (%)')
 axes[0, 0].set_title('ng8 vs gmax')
+axes[0, 0].legend(loc='best')
 
 axes[0, 1].set_xlabel('Nx')
 axes[0, 1].set_ylabel('ng8 percent change (%)')
 axes[0, 1].set_title('ng8 vs Nx')
+axes[0, 1].legend(loc='best')
 
-axes[1, 0].set_xlabel('Ny')
-axes[1, 0].set_ylabel('ng8 percent change (%)')
-axes[1, 0].set_title('ng8 vs Ny')
+axes[1, 0].set_xlabel('gmax')
+axes[1, 0].set_ylabel('Computation Time (s)')
+axes[1, 0].set_title('Computation Time vs gmax')
+axes[1, 0].legend(loc='best')
 
-axes[1, 1].set_xlabel('Computation Time (s)')
-axes[1, 1].set_ylabel('ng8')
-axes[1, 1].set_title('ng8 vs Computation Time')
+axes[1, 1].set_xlabel('Nx')
+axes[1, 1].set_ylabel('Computation Time (s)')
+axes[1, 1].set_title('Computation Time vs Nx')
+axes[1, 1].legend(loc='best')
 
 plt.tight_layout()
 plt.subplots_adjust(top=0.9)
 plt.show()
 
-# Similar plots for ng20
+# Convergence plots for ng20
 fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-fig.suptitle('Percent Change in ng20 with Different Parameters', fontsize=22)
+fig.suptitle('ng20 Convergence Analysis', fontsize=22)
 
-# Plot ng20 vs gmax for each gmode
+# Plot ng20 vs gmax for each gmode (top left)
 for gmode in unique_gmodes:
     marker = gmode_markers[gmode]
-    for Nx in unique_Nxs:
-        linestyle = Nx_linestyles[Nx]
-        for Ny in unique_Nys:
+    for Nx in [min(unique_Nxs)]:  # Use only minimum Nx for cleaner plot
+        for Ny in [min(unique_Nys)]:  # Use only minimum Ny for cleaner plot
             gmaxs = []
             ng20s = []
             for k in output:
@@ -237,15 +227,13 @@ for gmode in unique_gmodes:
                     ng20s.append(output[k]['ng20'])
             if gmaxs:
                 pct_change = calc_percent_change(ng20s, baseline_ng20)
-                axes[0, 0].plot(gmaxs, pct_change, marker=marker, linestyle=linestyle, 
-                               alpha=Ny_alphas[Ny], markersize=12, linewidth=2)
+                axes[0, 0].plot(gmaxs, pct_change, marker=marker, linestyle='-', 
+                              markersize=10, linewidth=2, label=f'gmode={list(gmode)}')
 
-# Plot ng20 vs Nx for each gmode and gmax
-for gmode in unique_gmodes:
-    marker = gmode_markers[gmode]
-    for gmax in unique_gmaxs:
-        color = gmax_colors[gmax]
-        for Ny in unique_Nys:
+# Plot ng20 vs Nx for each Ny (top right)
+for Ny in unique_Nys:
+    for gmode in [min(unique_gmodes, key=lambda x: len(x))]:  # Use only minimum gmode
+        for gmax in [min(unique_gmaxs)]:  # Use only minimum gmax
             Nxs = []
             ng20s = []
             for k in output:
@@ -256,165 +244,66 @@ for gmode in unique_gmodes:
                     ng20s.append(output[k]['ng20'])
             if Nxs:
                 pct_change = calc_percent_change(ng20s, baseline_ng20)
-                axes[0, 1].plot(Nxs, pct_change, marker=marker, color=color, 
-                               alpha=Ny_alphas[Ny], markersize=12, linewidth=2)
+                axes[0, 1].plot(Nxs, pct_change, marker='o', linestyle='-', 
+                              markersize=10, linewidth=2, label=f'Ny={Ny}')
 
-# Plot ng20 vs Ny for each gmode and gmax
+# Computation time analysis (bottom row) - repeating the same time plots for consistency
+# Plot computation time vs gmax for each gmode (bottom left)
 for gmode in unique_gmodes:
     marker = gmode_markers[gmode]
-    for gmax in unique_gmaxs:
-        color = gmax_colors[gmax]
-        for Nx in unique_Nxs:
-            Nys = []
-            ng20s = []
+    for Nx in [min(unique_Nxs)]:  # Use only minimum Nx
+        for Ny in [min(unique_Nys)]:  # Use only minimum Ny
+            gmaxs = []
+            times = []
+            for k in output:
+                if (tuple(output[k]['gmode']) == gmode and 
+                    output[k]['Nx'] == Nx and 
+                    output[k]['Ny'] == Ny):
+                    gmaxs.append(output[k]['gmax'])
+                    times.append(output[k]['time'])
+            if gmaxs:
+                axes[1, 0].plot(gmaxs, times, marker=marker, linestyle='-', 
+                              markersize=10, linewidth=2, label=f'gmode={list(gmode)}')
+
+# Plot computation time vs Nx for each Ny (bottom right)
+for Ny in unique_Nys:
+    for gmode in [min(unique_gmodes, key=lambda x: len(x))]:  # Use only minimum gmode
+        for gmax in [min(unique_gmaxs)]:  # Use only minimum gmax
+            Nxs = []
+            times = []
             for k in output:
                 if (tuple(output[k]['gmode']) == gmode and 
                     output[k]['gmax'] == gmax and 
-                    output[k]['Nx'] == Nx):
-                    Nys.append(output[k]['Ny'])
-                    ng20s.append(output[k]['ng20'])
-            if Nys:
-                pct_change = calc_percent_change(ng20s, baseline_ng20)
-                axes[1, 0].plot(Nys, pct_change, marker=marker, color=color, 
-                               linestyle=Nx_linestyles[Nx], markersize=12, linewidth=2)
+                    output[k]['Ny'] == Ny):
+                    Nxs.append(output[k]['Nx'])
+                    times.append(output[k]['time'])
+            if Nxs:
+                axes[1, 1].plot(Nxs, times, marker='o', linestyle='-', 
+                              markersize=10, linewidth=2, label=f'Ny={Ny}')
 
-# Plot ng20 vs computation time
-times = []
-ng20s = []
-for k in output:
-    times.append(output[k]['time'])
-    ng20s.append(output[k]['ng20'])
-axes[1, 1].scatter(times, ng20s, c='black', alpha=0.7, s=100)
-
-# Add legends to each subplot
-axes[0, 0].legend(handles=gmode_legend_elements + Nx_legend_elements + Ny_legend_elements, 
-                 loc='best', fontsize='medium', ncol=2)
-axes[0, 1].legend(handles=gmode_legend_elements + gmax_legend_elements + Ny_legend_elements, 
-                 loc='best', fontsize='medium', ncol=2)
-axes[1, 0].legend(handles=gmode_legend_elements + gmax_legend_elements + Nx_legend_elements, 
-                 loc='best', fontsize='medium', ncol=2)
-
+# Add annotations and labels
 axes[0, 0].set_xlabel('gmax')
 axes[0, 0].set_ylabel('ng20 percent change (%)')
 axes[0, 0].set_title('ng20 vs gmax')
+axes[0, 0].legend(loc='best')
 
 axes[0, 1].set_xlabel('Nx')
 axes[0, 1].set_ylabel('ng20 percent change (%)')
 axes[0, 1].set_title('ng20 vs Nx')
+axes[0, 1].legend(loc='best')
 
-axes[1, 0].set_xlabel('Ny')
-axes[1, 0].set_ylabel('ng20 percent change (%)')
-axes[1, 0].set_title('ng20 vs Ny')
+axes[1, 0].set_xlabel('gmax')
+axes[1, 0].set_ylabel('Computation Time (s)')
+axes[1, 0].set_title('Computation Time vs gmax')
+axes[1, 0].legend(loc='best')
 
-axes[1, 1].set_xlabel('Computation Time (s)')
-axes[1, 1].set_ylabel('ng20')
-axes[1, 1].set_title('ng20 vs Computation Time')
+axes[1, 1].set_xlabel('Nx')
+axes[1, 1].set_ylabel('Computation Time (s)')
+axes[1, 1].set_title('Computation Time vs Nx')
+axes[1, 1].legend(loc='best')
 
 plt.tight_layout()
 plt.subplots_adjust(top=0.9)
-plt.show()
-
-# Create a heatmap to show the combined effects of parameters
-fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-fig.suptitle('Parameter Influence on Group Index Calculation', fontsize=22)
-
-# Select a specific gmode and gmax to visualize Nx vs Ny
-selected_gmode = tuple(list(unique_gmodes)[0])  # First gmode
-selected_gmax = list(unique_gmaxs)[0]  # First gmax
-
-# Create meshgrid for Nx and Ny
-Nx_grid, Ny_grid = np.meshgrid(sorted(list(unique_Nxs)), sorted(list(unique_Nys)))
-ng8_grid = np.zeros_like(Nx_grid, dtype=float)
-ng20_grid = np.zeros_like(Nx_grid, dtype=float)
-ng8_pct_grid = np.zeros_like(Nx_grid, dtype=float)
-ng20_pct_grid = np.zeros_like(Nx_grid, dtype=float)
-
-# Fill in the values
-for i, Ny in enumerate(sorted(list(unique_Nys))):
-    for j, Nx in enumerate(sorted(list(unique_Nxs))):
-        for k in output:
-            if (tuple(output[k]['gmode']) == selected_gmode and 
-                output[k]['gmax'] == selected_gmax and
-                output[k]['Nx'] == Nx and 
-                output[k]['Ny'] == Ny):
-                ng8_grid[i, j] = output[k]['ng8']
-                ng20_grid[i, j] = output[k]['ng20']
-                # Calculate percent change from baseline
-                if baseline_ng8 is not None and baseline_ng8 != 0:
-                    ng8_pct_grid[i, j] = (output[k]['ng8'] - baseline_ng8) / baseline_ng8 * 100
-                if baseline_ng20 is not None and baseline_ng20 != 0:
-                    ng20_pct_grid[i, j] = (output[k]['ng20'] - baseline_ng20) / baseline_ng20 * 100
-
-# Plot heatmaps for percent change
-im1 = axes[0].pcolormesh(Nx_grid, Ny_grid, ng8_pct_grid, shading='auto', cmap='viridis')
-axes[0].set_title(f'ng8 % change for gmode={list(selected_gmode)}, gmax={selected_gmax}', fontsize=18)
-axes[0].set_xlabel('Nx', fontsize=16)
-axes[0].set_ylabel('Ny', fontsize=16)
-cbar1 = fig.colorbar(im1, ax=axes[0], label='ng8 % change')
-cbar1.ax.tick_params(labelsize=14)
-cbar1.set_label('ng8 % change', size=16)
-
-im2 = axes[1].pcolormesh(Nx_grid, Ny_grid, ng20_pct_grid, shading='auto', cmap='viridis')
-axes[1].set_title(f'ng20 % change for gmode={list(selected_gmode)}, gmax={selected_gmax}', fontsize=18)
-axes[1].set_xlabel('Nx', fontsize=16)
-axes[1].set_ylabel('Ny', fontsize=16)
-cbar2 = fig.colorbar(im2, ax=axes[1], label='ng20 % change')
-cbar2.ax.tick_params(labelsize=14)
-cbar2.set_label('ng20 % change', size=16)
-
-for ax in axes:
-    ax.tick_params(axis='both', which='major', labelsize=14)
-
-plt.tight_layout()
-plt.show()
-
-# Relative convergence - how much parameters affect the result (in percent)
-param_effects = {
-    'gmode': {'ng8': [], 'ng20': []},
-    'gmax': {'ng8': [], 'ng20': []},
-    'Nx': {'ng8': [], 'ng20': []},
-    'Ny': {'ng8': [], 'ng20': []}
-}
-
-# Calculate relative percent effects for each parameter from baseline
-for param in ['gmode', 'gmax', 'Nx', 'Ny']:
-    for metric in ['ng8', 'ng20']:
-        baseline = baseline_ng8 if metric == 'ng8' else baseline_ng20
-        max_value = baseline
-        for k in output:
-            if output[k][metric] > max_value:
-                max_value = output[k][metric]
-        if baseline and baseline != 0:
-            param_effects[param][metric] = (max_value - baseline) / baseline * 100  # percent change
-
-# Plot parameter effects
-fig, ax = plt.subplots(figsize=(12, 8))
-bar_width = 0.35
-index = np.arange(len(param_effects))
-
-ng8_effects = [param_effects[param]['ng8'] for param in param_effects]
-ng20_effects = [param_effects[param]['ng20'] for param in param_effects]
-
-bar1 = ax.bar(index - bar_width/2, ng8_effects, bar_width, label='ng8', linewidth=2, edgecolor='black')
-bar2 = ax.bar(index + bar_width/2, ng20_effects, bar_width, label='ng20', linewidth=2, edgecolor='black')
-
-ax.set_xlabel('Parameter', fontsize=18)
-ax.set_ylabel('Relative Effect on Convergence (%)', fontsize=18)
-ax.set_title('Parameter Influence on Group Index Calculation', fontsize=22)
-ax.set_xticks(index)
-ax.set_xticklabels(list(param_effects.keys()), fontsize=16)
-ax.tick_params(axis='y', labelsize=16)
-ax.legend(fontsize=16)
-
-# Add value labels on top of the bars
-for i, v in enumerate(ng8_effects):
-    ax.text(index[i] - bar_width/2, v + 0.5, f'{v:.1f}%', 
-            ha='center', va='bottom', fontsize=14, fontweight='bold')
-for i, v in enumerate(ng20_effects):
-    ax.text(index[i] + bar_width/2, v + 0.5, f'{v:.1f}%', 
-            ha='center', va='bottom', fontsize=14, fontweight='bold')
-
-plt.tight_layout()
 plt.show()
 
 # %%
