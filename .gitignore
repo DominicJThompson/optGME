@@ -5,3 +5,5 @@ pyvenv.cfg
 lib/python3.11/site-packages/
 media
 bin
+*.json
+nohup.out
