@@ -154,7 +154,7 @@ def worker_function(input):
     manager.add_inside_unit_cell('Inside',.5)
     manager.add_rad_bound('minimumRadius',27.5/266,.35)
     manager.add_min_dist('minDist',40/266,3)
-    manager.add_gme_constrs_complex('gme_constrs',minFreq=.25,maxFreq=.27,ksBefore=[float(ks[3]),float(ks[6])],ksAfter=[float(ks[16]),float(ks[24])],bandwidth=.005,slope='down')
+    manager.add_gme_constrs_complex('gme_constrs',minFreq=.26,maxFreq=.27,ksBefore=[float(ks[3]),float(ks[6])],ksAfter=[float(ks[16]),float(ks[24])],bandwidth=.005,slope='down')
 
     #the eigenvalue of interest changes depending on gmax: gmax=2.01, eig=19 but gmax=4.01, eig=20
     #run minimization

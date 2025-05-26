@@ -26,8 +26,8 @@ class ConstraintManager(object):
 
         #this contains the lower and uppoer bounds for all the input variables, 
         #these are used for rad limits and unit cell confinment
-        self.lowerBounds = np.ones(len(x0))*100
-        self.upperBounds = np.ones(len(x0))*-100
+        self.lowerBounds = np.ones(len(x0))*-100
+        self.upperBounds = np.ones(len(x0))*100
 
         #this contains the name and discription of the constraint:
         #{'name': {'discription': short discription, 'args': any relevent arguments}},..}
@@ -134,8 +134,8 @@ class ConstraintManager(object):
         """
         nH = self.defaultArgs['numberHoles']
         self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._min_dist,(buffer,)),
-                                                     -np.inf,
                                                      minDist,
+                                                     np.inf,
                                                      jac=self._wrap_grad(jacobian(self._min_dist),(buffer,)))
         
         #change bounds on edges so the y value doesn't become too large or small 
