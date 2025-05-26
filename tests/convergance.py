@@ -22,31 +22,36 @@ gme = legume.GuidedModeExp(phc,2.01)
 gme.run(**gmeParams)
 
 # %%
-gmodes = [[0],[0,2],[0,2,4]]
-gmaxs = [2.01,3.01,4.01]
-Nxs = [60,100,300]
-Nys = [125,200,600]
+gmodes = [[0],[0,2],[0,2,4],[0,2,4,6],[0,2,4,6,8]]
+gmaxs = [3.01,4.01,5.01]
+Nxs = [60,100,300,700]
+Nys = [125,200,600,1000]
 output = {}
 # Create a list of all combinations of gmodes and gmaxs
 combinations = []
 for gmode in gmodes:
     for gmax in gmaxs:
-        for Nx in Nxs:
-            for Ny in Nys:
-                combinations.append((gmode,gmax,Nx,Ny))
+        combinations.append((gmode,gmax))
 
-for i, (gmode,gmax,Nx,Ny) in enumerate(combinations):
-    print(f'{gmode} {gmax} {Nx} {Ny}')
+combinations2 = []
+for Nx in Nxs:
+    for Ny in Nys:
+        combinations2.append((Nx,Ny))
+
+for i, (gmode,gmax) in enumerate(combinations):
     start = time.time()
     phc = W1(NyChange=0,ra=.3)
     gmeParams = {'gmode_inds':gmode,'verbose':False,'numeig':21,'compute_im':False,'kpoints':np.vstack(([ks[8],ks[20]],[0,0]))}
     gme = legume.GuidedModeExp(phc,gmax)
     gme.run(**gmeParams)
-    
-    ng8 = NG(gme,0,20,Nx=Nx,Ny=Ny)
-    ng20 = NG(gme,1,20,Nx=Nx,Ny=Ny)
-    end = time.time()
-    output[f'{i}'] = {'gmode':gmode,'gmax':gmax,'Nx':Nx,'Ny':Ny,'ng8':ng8,'ng20':ng20,'time':end-start}
+    gme_time = time.time()-start
+    for Nx,Ny in combinations2:
+        print(f'{gmode} {gmax} {Nx} {Ny}')
+        start = time.time()
+        ng8 = NG(gme,0,20,Nx=Nx,Ny=Ny)
+        ng20 = NG(gme,1,20,Nx=Nx,Ny=Ny)
+        end = time.time()
+        output[f'{i}'] = {'gmode':gmode,'gmax':gmax,'Nx':Nx,'Ny':Ny,'ng8':ng8,'ng20':ng20,'time':end-start+gme_time}
     
 with open('output.json', 'w') as f:
     json.dump(output, f)
