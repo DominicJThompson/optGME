@@ -3,6 +3,7 @@ from scipy.optimize import Bounds, NonlinearConstraint
 import autograd.numpy as np
 from autograd import grad,jacobian
 import legume.backend as bd
+from optomization.utils import NG
 
 
 class ConstraintManager(object):
@@ -148,7 +149,7 @@ class ConstraintManager(object):
             'type': 'constraint'
         }
 
-    def add_gme_constrs_complex(self,name,minFreq=0,maxFreq=100,ksBefore=[0],ksAfter=[np.pi],bandwidth=.01,slope='down'):
+    def add_gme_constrs_complex(self,name,minFreq=0,maxFreq=100,minNG=0,maxNG=100,ksBefore=[0],ksAfter=[np.pi],bandwidth=.01,slope='down'):
         """
         implements the folowing constraints:
         freq_bound,
@@ -169,12 +170,12 @@ class ConstraintManager(object):
 
 
         self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._gme_constrs_complex,(ksBefore,ksAfter,bandwidth,slope)),
-                                                     np.array([minFreq,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]),
-                                                     np.array([maxFreq,0,0,0,0,0,0]),
+                                                     np.array([minFreq,minNG,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]),
+                                                     np.array([maxFreq,maxNG,0,0,0,0,0,0]),
                                                      jac=self._wrap_grad(jacobian(self._gme_constrs_complex),(ksBefore,ksAfter,bandwidth,slope)))
         self.constraintsDisc[name] = {
             'discription': """implements the folowing constraints: freq_bound, ng_bound, monotonic_band, bandwidth, and ng sign constraints on either side """,
-            'args': {'minFreq': minFreq, 'maxFreq': maxFreq,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
+            'args': {'minFreq': minFreq, 'maxFreq': maxFreq,'minNG': minNG, 'maxNG': maxNG,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
             'type': 'constraint'
         }
     
@@ -203,6 +204,7 @@ class ConstraintManager(object):
         kpointsAfter = bd.vstack((bd.array(ksAfter),bd.zeros(len(ksAfter))))
         kpoints = bd.hstack((kpointsBefore,gmeParams['kpoints'],kpointsAfter))
         gmeParams['kpoints'] = kpoints
+        gmeParams['gmode_inds'] = self.defaultArgs['gmode_inds']
         gmeParams['numeig'] = self.defaultArgs['gmeParams']['numeig']+1
         gme.run(**gmeParams)
 
@@ -217,13 +219,8 @@ class ConstraintManager(object):
         #get frequency bound constraint
         freq = gme.freqs[0,self.defaultArgs['mode']]
 
-        #get the ng bound constraint
-        #Efield,_,_ = gme.get_field_xy('E',len(ksBefore),self.defaultArgs['mode'],phc.layers[0].d/2,Nx=60,Ny=125)
-        #Hfield,_,_ = gme.get_field_xy('H',len(ksBefore),self.defaultArgs['mode'],phc.layers[0].d/2,Nx=60,Ny=125)
-        #Efield = bd.array([[Efield['x']],[Efield['y']],[Efield['z']]])
-        #Hfield = bd.array([[Hfield['x']],[Hfield['y']],[Hfield['z']]])
-        #ng = -c*1/(bd.sum(bd.real(bd.cross(bd.conj(Efield),Hfield,axis=0)))*phc.lattice.a2[1]/60/125*phc.layers[0].d)
-        #boundNG = -ng
+        #get ng bound constraint
+        ng = c*NG(gme,len(ksBefore),self.defaultArgs['mode'],Nx=100,Ny=125)
 
         #monotonic constraint
         monotonic = c*(gme.freqs[:-1,self.defaultArgs['mode']]-gme.freqs[1:,self.defaultArgs['mode']])
@@ -232,21 +229,5 @@ class ConstraintManager(object):
         above = bandwidth/2+freq-gme.freqs[-1,self.defaultArgs['mode']+1]
         below = bandwidth/2-freq+gme.freqs[1,self.defaultArgs['mode']-1]
 
-        #ng direction correct before
-        #Efield,_,_ = gme.get_field_xy('E',len(ksBefore)-1,self.defaultArgs['mode'],phc.layers[0].d/2,Nx=60,Ny=125)
-        #Hfield,_,_ = gme.get_field_xy('H',len(ksBefore)-1,self.defaultArgs['mode'],phc.layers[0].d/2,Nx=60,Ny=125)
-        #Efield = bd.array([[Efield['x']],[Efield['y']],[Efield['z']]])
-        #Hfield = bd.array([[Hfield['x']],[Hfield['y']],[Hfield['z']]])
-        #ng = -c*1/(bd.sum(bd.real(bd.cross(bd.conj(Efield),Hfield,axis=0)))*phc.lattice.a2[1]/60/125*phc.layers[0].d)
-        #boundNGBefore = -ng
-
-        #ng direction correct
-        #Efield,_,_ = gme.get_field_xy('E',len(ksBefore)+1,self.defaultArgs['mode'],phc.layers[0].d/2,Nx=60,Ny=125)
-        #Hfield,_,_ = gme.get_field_xy('H',len(ksBefore)+1,self.defaultArgs['mode'],phc.layers[0].d/2,Nx=60,Ny=125)
-        #Efield = bd.array([[Efield['x']],[Efield['y']],[Efield['z']]])
-        #Hfield = bd.array([[Hfield['x']],[Hfield['y']],[Hfield['z']]])
-        #ng = -c*1/(bd.sum(bd.real(bd.cross(bd.conj(Efield),Hfield,axis=0)))*phc.lattice.a2[1]/60/125*phc.layers[0].d)
-        #boundNGAfter = -ng
-
         #combine constraints and return
-        return(bd.hstack((freq,monotonic,above,below)))
+        return(bd.hstack((freq,ng,monotonic,above,below)))

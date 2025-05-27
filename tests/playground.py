@@ -9,43 +9,37 @@ legume.set_backend('autograd')
 import autograd.numpy as npa
 import optomization
 import json
+from optomization.utils import NG
 
 #%%
-ngs = [5, 10, 30]
-fun_values = {ng: [] for ng in ngs}
-constr_violations = {ng: [] for ng in ngs}
+ks = np.linspace(np.pi/2,np.pi,100)
+phc = optomization.W1(NyChange=0,ra=.3)
+gme = legume.GuidedModeExp(phc,4.01)
+gme.run(gmode_inds=[0],numeig=21,compute_im=False,kpoints=np.vstack((ks,[0]*len(ks))))
+# %%
+ngs = []
+for i in range(len(ks)):
+    ng = NG(gme,i,20)
+    ngs.append(ng)
+# %%
+ngsnp = -np.array(ngs)
+plt.plot(ngsnp)
 
-# Go through each ng value
-for ng in ngs:
-    # Look for files matching the pattern ng{ng}_*.json
-    for i in range(10):  # Assuming max 10 files per ng
-        try:
-            with open(f"./media/w1/sweepNG/ng{ng}_{i}.json", 'r') as f:
-                data = json.load(f)
-            fun_values[ng].append(data[-1]['result']['fun'])
-            constr_violations[ng].append(data[-1]['result']['constr_violation'])
-        except:
-            continue
+# Find indices where ng equals 5, 10, and 30 (or is closest to these values)
+target_ngs = [5, 10, 30]
+indices = []
+for target in target_ngs:
+    idx = np.argmin(np.abs(ngsnp - target))
+    indices.append(idx)
+    plt.plot(idx, ngsnp[idx], 'o', markersize=8, label=f'ng={target} at index {idx}')
 
-# Create the plot
-plt.figure(figsize=(10, 6))  # Increased figure size
+plt.legend()
+plt.yscale('log')
 
-# Plot points for each ng value
-for ng in ngs:
-    for fun, constr in zip(fun_values[ng], constr_violations[ng]):
-        if constr == 0:
-            plt.scatter(ng, fun, color='green', s=150)  # Increased marker size
-        else:
-            plt.scatter(ng, fun, c=[constr], cmap='plasma', s=150)  # Increased marker size
-
-plt.hlines(-7.1,0,40,'r',linestyle='--')
-plt.colorbar(label='Constraint Violation')  # Increased font size
-plt.xlabel('ng value', fontsize=14)  # Increased font size
-plt.ylabel('fun value', fontsize=14)  # Increased font size
-plt.title('Optimization Results by ng Value', fontsize=16)  # Increased font size
-plt.grid(True)
-plt.xticks(fontsize=12)  # Increased tick label size
-plt.yticks(fontsize=12)  # Increased tick label size
-plt.xlim(4,31)
 plt.show()
+
+# %%
+legume.viz.eps_xy(phc)
+# %%
+plt.plot(gme.freqs[:,20])
 # %%

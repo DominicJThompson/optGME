@@ -87,13 +87,14 @@ def worker_function(input):
                                             crystal=W1,
                                             phcParams={},
                                             gmeParams=gmeParams,
-                                            gmax=2.01,
-                                            mode=20)
+                                            gmax=4.01,
+                                            mode=20,
+                                            gmode_inds=[0])
     
     manager.add_inside_unit_cell('Inside',.5)
     manager.add_rad_bound('minimumRadius',.15,.42)
     manager.add_min_dist('minDist',40/266,3)
-    manager.add_gme_constrs_complex_ng('gme_constrs_ng',minFreq=.26,maxFreq=.28,minNg=input['ng']*.9,maxNg=input['ng']*1.1,ksBefore=[float(ks[input['indexB'][0]]),float(ks[input['indexB'][1]])],ksAfter=[float(ks[input['indexA'][0]]),float(ks[input['indexA'][1]])],bandwidth=.000,slope='down')
+    manager.add_gme_constrs_complex_ng('gme_constrs_ng',minFreq=.26,maxFreq=.28,minNg=input['ng']*.9,maxNg=input['ng']*1.1,ksBefore=[float(ks[input['indexB'][0]]),float(ks[input['indexB'][1]])],ksAfter=[float(ks[input['indexA'][0]]),float(ks[input['indexA'][1]])],bandwidth=.002,slope='down')
     #run minimization
     minim = optomization.TrustConstr(vars,W1,cost,mode=20,maxiter=400,gmeParams=gmeParams,constraints=manager,path=input['path'],initial_tr_radius=.1,xtol=1e-4)
     minim.minimize()
@@ -101,14 +102,12 @@ def worker_function(input):
 #%%
 if __name__=='__main__':
     #print working directory
-    ngs = [5,10,30]
-    indexs = [46,68,91]    
-    indexsA = [[75,120],[82,120],[110,120]]
-    indexsB = [[10,20],[10,30],[10,65]]
+    ngs = [30,10,5]
+    indexs = [62,45,30]    
+    indexsA = [[85,120],[82,120],[75,120]]
+    indexsB = [[10,45],[10,30],[10,20]]
     for j in np.arange(10)+10:
         for i,ng in enumerate(ngs):
-            if (((ng==5 or ng==10) and j<=4) and not (ng==5 and j==0)) or ((ng==30) and j<=3):
-                continue
             input = {'path':f"./media/w1/sweepNG/ng{ng}_{j}.json",'ng':ng,'key':j,'index':indexs[i],'indexB':indexsB[i],'indexA':indexsA[i]}
             minim = worker_function(input)  # Compute the result
 # %%
