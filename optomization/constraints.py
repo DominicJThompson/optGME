@@ -203,7 +203,6 @@ class ConstraintManager(object):
         kpointsBefore = bd.vstack((bd.array(ksBefore),bd.zeros(len(ksBefore))))
         kpointsAfter = bd.vstack((bd.array(ksAfter),bd.zeros(len(ksAfter))))
         kpoints = bd.hstack((kpointsBefore,gmeParams['kpoints'],kpointsAfter))
-        print(kpoints)
         gmeParams['kpoints'] = kpoints
         gmeParams['gmode_inds'] = self.defaultArgs['gmode_inds']
         gmeParams['numeig'] = self.defaultArgs['gmeParams']['numeig']+1
@@ -222,7 +221,6 @@ class ConstraintManager(object):
 
         #get ng bound constraint
         ng = c*NG(gme,len(ksBefore),self.defaultArgs['mode'],Nx=100,Ny=125)
-        print(ng)
 
         #monotonic constraint
         monotonic = c*(gme.freqs[:-1,self.defaultArgs['mode']]-gme.freqs[1:,self.defaultArgs['mode']])

@@ -80,7 +80,6 @@ def worker_function(input):
     vars = W1Vars(key=input['key'])
 
     gmeParams = {'verbose':False,'numeig':21,'compute_im':False,'kpoints':npa.array([[ks[input['index']]],[0]]),'gmode_inds':[0,2,4]}
-    print(gmeParams)
     #define constraints
     manager = optomization.ConstraintManager(x0=vars,
                                             numberHoles=3,
@@ -95,7 +94,7 @@ def worker_function(input):
     manager.add_rad_bound('minimumRadius',.15,.42)
     manager.add_min_dist('minDist',40/266,3)
     manager.add_gme_constrs_complex('gme_constrs_ng',minFreq=.26,maxFreq=.28,minNG=input['ng']*.9,maxNG=input['ng']*1.1,ksBefore=[float(ks[input['indexB'][0]]),float(ks[input['indexB'][1]])],ksAfter=[float(ks[input['indexA'][0]]),float(ks[input['indexA'][1]])],bandwidth=.002,slope='down')
-    manager._gme_constrs_complex(vars,ks[input['indexB']],ks[input['indexA']],.002,'down')
+    
     #run minimization
     minim = optomization.TrustConstr(vars,W1,cost,mode=20,maxiter=400,gmeParams=gmeParams,constraints=manager,path=input['path'],initial_tr_radius=.1,xtol=1e-4)
     minim.minimize()
@@ -110,6 +109,5 @@ if __name__=='__main__':
     for j in np.arange(50):
         for i,ng in enumerate(ngs):
             input = {'path':f"./media/w1/sweepNG/ng{ng}_{j}.json",'ng':ng,'key':j,'index':indexs[i],'indexB':indexsB[i],'indexA':indexsA[i]}
-            print(input)
             minim = worker_function(input)  # Compute the result
 # %%
