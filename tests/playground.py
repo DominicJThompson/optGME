@@ -12,7 +12,7 @@ import json
 from optomization.utils import NG
 
 #%%
-ks = np.linspace(np.pi/2,np.pi,100)
+ks = np.linspace(np.pi/2,np.pi,150)
 phc = optomization.W1(NyChange=0,ra=.3)
 gme = legume.GuidedModeExp(phc,4.01)
 gme.run(gmode_inds=[0],numeig=21,compute_im=False,kpoints=np.vstack((ks,[0]*len(ks))))
@@ -41,5 +41,5 @@ plt.show()
 # %%
 legume.viz.eps_xy(phc)
 # %%
-plt.plot(gme.freqs[:,20])
+print(gme.kpoints[0,indices])
 # %%
