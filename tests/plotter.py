@@ -17,7 +17,7 @@ plt.rcParams.update({'font.size':20})
 mpl.rcParams['text.usetex'] = False
 mpl.rcParams['mathtext.fontset'] = 'cm'  # Use Computer Modern math fonts
 mpl.rcParams['font.family'] = 'STIXGeneral'  # Use STIX fonts (similar to Computer Modern)
-
+#%%
 nk=150
 
 
@@ -689,5 +689,166 @@ plt.xlabel('Index', fontsize=14)
 plt.ylabel('Group Index (ng)', fontsize=14)
 plt.title('Group Index with Markers at Specific Values', fontsize=16)
 plt.grid(True, which='both', linestyle='--', alpha=0.7)
+plt.show()
+# %%
+with open('/Users/dominic/Desktop/optGME/tests/media/ginds3/ziwBest.json','r') as file:
+    outZIW = json.load(file)
+
+with open('/Users/dominic/Desktop/optGME/tests/media/ginds3/W1Best.json','r') as file:
+    outW1 = json.load(file)
+
+W1opt = []
+W1CV = []
+ZIWopt = []
+ZIWCV = []
+for p in outW1[:-1]:
+    W1opt.append(p['objective_value'])
+    W1CV.append(p['constraint_violation'])
+for p in outZIW[:-1]:
+    ZIWopt.append(p['objective_value'])
+    ZIWCV.append(p['constraint_violation'])
+
+W1opt = 10**(np.array(W1opt))/266/1E-7
+ZIWopt = 10**(np.array(ZIWopt))/266/1E-7
+# %%
+# Create separate figures for W1 and ZIW optimization plots
+
+# First figure: W1 Optimization
+fig1, ax1 = plt.subplots(figsize=(5, 4))
+
+# Set log scales for W1 plot
+ax1.set_yscale('log')
+ax1.set_xscale('log')
+
+# Highlight regions where constraint violation is non-zero for W1
+violation_regions_w1 = []
+start = None
+
+# Find continuous regions of constraint violations for W1
+for i in range(len(W1opt)):
+    if W1CV[i] > 0 and start is None:
+        start = i
+    elif W1CV[i] <= 0 and start is not None:
+        violation_regions_w1.append((start, i))
+        start = None
+
+# Add the last region if it extends to the end
+if start is not None:
+    violation_regions_w1.append((start, len(W1opt)))
+
+# Add dashed horizontal lines for initial and final values for W1
+initial_value_w1 = W1opt[0]
+final_value_w1 = W1opt[-1]
+ax1.axhline(y=initial_value_w1, color='k', linestyle='--', alpha=0.7, zorder=0)
+ax1.axhline(y=final_value_w1, color='k', linestyle='--', alpha=0.7, zorder=0)
+
+# Plot W1 optimization data
+x_values = np.arange(1, len(W1opt) + 1)  # Start from 1 for log scale
+
+# Plot base line first
+ax1.plot(x_values, W1opt, 'b-', linewidth=2.5, zorder=2)
+
+# Add markers with different colors based on constraint violation
+for i, val in enumerate(W1opt):
+    idx = i + 1  # Adjust for 1-based indexing in plot
+    in_violation = any(start <= i < end for start, end in violation_regions_w1)
+    if in_violation:
+        ax1.plot(idx, val, 'ro', markersize=4, zorder=3)
+    else:
+        ax1.plot(idx, val, 'o', markersize=4, markerfacecolor='blue', markeredgecolor='darkblue', zorder=3)
+
+# Add violation regions
+for start, end in violation_regions_w1:
+    ax1.axvspan(start + 1, end + 1, alpha=0.2, color='#FF000080', edgecolor=None)
+
+# Add labels for initial and final values for W1, formatted for small numbers
+ax1.text(len(W1opt)*0.1, initial_value_w1*1.2, f'Initial: {initial_value_w1:.5f}', 
+         verticalalignment='bottom', horizontalalignment='right', fontsize=14, 
+         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
+ax1.text(len(W1opt)*0.1, final_value_w1*0.8, f'Final: {final_value_w1:.5f}', 
+         verticalalignment='top', horizontalalignment='right', fontsize=14,
+         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
+
+ax1.set_title('W1 Optimization', fontsize=18, fontweight='bold')
+ax1.set_xlabel('Iteration', fontsize=16)
+ax1.set_ylabel(r'Loss $\langle\alpha_{back}\rangle/n_g^2$ [cm$^{-1}$]', fontsize=16)
+ax1.set_xlim(1, len(W1opt))  # Start from 1 for log scale
+ax1.grid(True, linestyle='--', alpha=0.3, which='both')
+ax1.tick_params(axis='both', which='major', labelsize=13)
+ax1.set_ylim(.9E-4,6.5E-3)
+
+# Make the plot square by adjusting the aspect ratio
+ax1.set_box_aspect(0.8)
+
+plt.tight_layout()
+plt.show()
+
+# Second figure: ZIW Optimization
+fig2, ax2 = plt.subplots(figsize=(5, 4))
+
+# Set log scales for ZIW plot
+ax2.set_yscale('log')
+ax2.set_xscale('log')
+
+# Highlight regions where constraint violation is non-zero for ZIW
+violation_regions_ziw = []
+start = None
+
+# Find continuous regions of constraint violations for ZIW
+for i in range(len(ZIWopt)):
+    if ZIWCV[i] > 0 and start is None:
+        start = i
+    elif ZIWCV[i] <= 0 and start is not None:
+        violation_regions_ziw.append((start, i))
+        start = None
+
+# Add the last region if it extends to the end
+if start is not None:
+    violation_regions_ziw.append((start, len(ZIWopt)))
+
+# Add dashed horizontal lines for initial and final values for ZIW
+initial_value_ziw = ZIWopt[0]
+final_value_ziw = ZIWopt[-1]
+ax2.axhline(y=initial_value_ziw, color='k', linestyle='--', alpha=0.7, zorder=0)
+ax2.axhline(y=final_value_ziw, color='k', linestyle='--', alpha=0.7, zorder=0)
+
+# Plot ZIW optimization data
+x_values = np.arange(1, len(ZIWopt) + 1)  # Start from 1 for log scale
+
+# Plot base line first
+ax2.plot(x_values, ZIWopt, 'g-', linewidth=2.5, zorder=2)
+
+# Add markers with different colors based on constraint violation
+for i, val in enumerate(ZIWopt):
+    idx = i + 1  # Adjust for 1-based indexing in plot
+    in_violation = any(start <= i < end for start, end in violation_regions_ziw)
+    if in_violation:
+        ax2.plot(idx, val, 'ro', markersize=4, zorder=3)
+    else:
+        ax2.plot(idx, val, 'o', markersize=4, markerfacecolor='green', markeredgecolor='darkgreen', zorder=3)
+
+# Add violation regions
+for start, end in violation_regions_ziw:
+    ax2.axvspan(start + 1, end + 1, alpha=0.2, color='#FF000080', edgecolor=None)
+
+# Add labels for initial and final values for ZIW, formatted for small numbers
+ax2.text(len(ZIWopt)*0.9, initial_value_ziw*1.2, f'Initial: {initial_value_ziw:.5f}', 
+         verticalalignment='bottom', horizontalalignment='right', fontsize=14,
+         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
+ax2.text(len(ZIWopt)*0.9, final_value_ziw*0.8, f'Final: {final_value_ziw:.5f}', 
+         verticalalignment='top', horizontalalignment='right', fontsize=14,
+         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
+
+ax2.set_title('ZIW Optimization', fontsize=18, fontweight='bold')
+ax2.set_xlabel('Iteration', fontsize=16)
+ax2.set_ylabel(r'Loss $\langle\alpha_{back}\rangle/n_g^2$ [cm$^{-1}$]', fontsize=16)
+ax2.set_xlim(1, len(ZIWopt))  # Start from 1 for log scale
+ax2.grid(True, linestyle='--', alpha=0.3, which='both')
+ax2.tick_params(axis='both', which='major', labelsize=13)
+
+# Make the plot square by adjusting the aspect ratio
+ax2.set_box_aspect(0.8)
+
+plt.tight_layout()
 plt.show()
 # %%
