@@ -43,3 +43,79 @@ legume.viz.eps_xy(phc)
 # %%
 print(gme.kpoints[0,indices])
 # %%
+# Get all files in the sweepNG directory
+sweep_dir = './media/w1/sweepNG'
+files = os.listdir(sweep_dir)
+
+# Initialize lists to store results
+ng_values = []
+objective_values = []
+constraint_violations = []
+colors = []
+initial_values = []
+
+# Process each file
+for file in files:
+    if file.endswith('.json'):
+        # Extract ng value from filename
+        ng = int(file.split('_')[0][2:])  # Extract number after 'ng'
+        
+        # Read and parse JSON file
+        with open(os.path.join(sweep_dir, file), 'r') as f:
+            data = json.load(f)
+            
+        # Get final results
+        final_result = data[-2]['objective_value']
+        constraint_violation = data[-2]['constraint_violation']
+        initial_value = data[0]['objective_value']  # Get initial value
+        
+        # Store results
+        ng_values.append(ng)
+        objective_values.append(final_result)
+        constraint_violations.append(constraint_violation)
+        colors.append('green' if constraint_violation == 0 else 'red')
+        initial_values.append(initial_value)
+
+# Create plot
+plt.figure(figsize=(10, 6))
+
+# Plot dashed line at the initial value
+plt.axhline(y=initial_values[0], color='gray', linestyle='--', alpha=0.7, 
+           label='Initial Value')
+
+# Separate points by color and offset them slightly
+red_mask = np.array(colors) == 'red'
+green_mask = np.array(colors) == 'green'
+
+# Plot red points slightly to the left
+plt.scatter(np.array(ng_values)[red_mask] - 0.5, 
+           np.array(objective_values)[red_mask], 
+           c='red', s=250, edgecolor='black', linewidth=1)
+
+# Plot green points slightly to the right
+plt.scatter(np.array(ng_values)[green_mask] + 0.5, 
+           np.array(objective_values)[green_mask], 
+           c='green', s=250, edgecolor='black', linewidth=1)
+
+# Add labels and title
+plt.xlabel('Group Index (ng)')
+plt.ylabel(r'$\log(\text{Loss}/n_g^2)$ [a]')
+plt.title('Final Results vs Group Index')
+
+# Add legend for colors and initial value
+from matplotlib.lines import Line2D
+legend_elements = [
+    Line2D([0], [0], marker='o', color='w', markerfacecolor='green', 
+           markersize=10, markeredgecolor='black', label='Constraint Violation = 0'),
+    Line2D([0], [0], marker='o', color='w', markerfacecolor='red', 
+           markersize=10, markeredgecolor='black', label='Constraint Violation > 0'),
+    Line2D([0], [0], color='gray', linestyle='--', label='Initial Value')
+]
+plt.legend(handles=legend_elements)
+
+plt.grid(True, alpha=0.3)
+plt.show()
+
+# %%
+
+# %%

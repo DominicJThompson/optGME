@@ -11,7 +11,9 @@ import autograd.numpy as npa
 import legume
 from optomization import Backscatter
 import matplotlib as mpl
-plt.rcParams.update({'font.size':20})
+from optomization import NG
+plt.rcParams.update({'font.size':20}) 
+print(legume.__version__)
 
 # Disable LaTeX but use Computer Modern fonts
 mpl.rcParams['text.usetex'] = False
@@ -159,7 +161,7 @@ def runSims(xs,crystal,params):
         alphas.append(10**cost.cost(gmeAlphacalc,phc,params['mode']))
         ngs.append((1/2/np.pi)*np.abs(.001/(gmeAlphacalc.freqs[1,params['mode']]-gmeAlphacalc.freqs[0,params['mode']])))
     return(phc,gme,alphas,ngs)
-
+#%%
 def plotBands(gme,ng,params,color='red',plotback=True,index=0):
 
     # Font size parameters
@@ -171,7 +173,7 @@ def plotBands(gme,ng,params,color='red',plotback=True,index=0):
     #missilanius variables needed
     conFac = 1e-12*299792458/params['cost']['a']/1e-9
     if index==0 or index==1:
-        freqmin, freqmax = .248, .282
+        freqmin, freqmax = .245, .282
     elif index==2 or index==3:
         freqmin, freqmax = .238, .282
     mode = params['mode']
@@ -186,7 +188,7 @@ def plotBands(gme,ng,params,color='red',plotback=True,index=0):
 
     # Main subplot (dispersion curve)
     ax2 = plt.gca()
-    ax2.set_xlabel(r"Wavevector $k_x 2\pi/a$",fontsize=LABEL_FONT_SIZE)
+    ax2.set_xlabel(r"Wavevector $\tilde k$",fontsize=LABEL_FONT_SIZE)
     ax2.set_ylabel(r"Frequency $\omega a / 2\pi c$",fontsize=LABEL_FONT_SIZE)
     ax2.set_xlim(0.25, 0.5)
     ax2.set_ylim(freqmin,freqmax)
@@ -212,10 +214,10 @@ def plotBands(gme,ng,params,color='red',plotback=True,index=0):
     ax2.scatter([ks[se[2*index]],ks[se[2*index+1]]],[gme.freqs[se[2*index],mode],gme.freqs[se[2*index+1],mode]],s=150,color=color,zorder=3,edgecolor='black', linewidth=1.5)
     
     # Add text labels with slight offset for better visibility
-    if index==0:a,b = r'$a^\prime$',r'$b^\prime$'
-    elif index==1:a,b = r'$a$',r'$b$'
-    elif index==2:a,b = r'$c^\prime$',r'$d^\prime$'
-    elif index==3:a,b = r'$c$',r'$d$'
+    if index==0:a,b = r'$\mathbf{a}^\prime$',r'$\mathbf{b}^\prime$'
+    elif index==1:a,b = r'$\mathbf{a}$',r'$\mathbf{b}$'
+    elif index==2:a,b = r'$\mathbf{c}^\prime$',r'$\mathbf{d}^\prime$'
+    elif index==3:a,b = r'$\mathbf{c}$',r'$\mathbf{d}$'
     ax2.annotate(a, 
                  (ks[se[2*index]], gme.freqs[se[2*index], mode]),
                  xytext=(5, 5),
@@ -224,7 +226,7 @@ def plotBands(gme,ng,params,color='red',plotback=True,index=0):
                  fontsize=ANNOTATION_FONT_SIZE) 
     ax2.annotate(b, 
                  (ks[se[2*index+1]], gme.freqs[se[2*index+1], mode]),
-                 xytext=(+35, -30),
+                 xytext=(40, -30),
                  textcoords='offset points',
                  color=color,
                  fontsize=ANNOTATION_FONT_SIZE)
@@ -251,7 +253,7 @@ def plotBands(gme,ng,params,color='red',plotback=True,index=0):
     # Show plot
     plt.show()
 
-#plotBands(gme,ng,out[-1],color='#EE7733',plotback=False,index=2)
+plotBands(gme,ng,out[-1],color='#EE7733',plotback=False,index=2)
 plotBands(gmeOG,ngOG,out[-1],color='#0077BB',plotback=False,index=3)
 
 #plotBands(gmeW1,ngW1,out[-1],color='#EE7733',index=0)
@@ -305,7 +307,7 @@ def filedPlots(phc,phcOG,gme,gmeOG,params):
     LABEL_SIZE = 26
     TICK_SIZE = 20
     LEGEND_SIZE = 24
-    COLORBAR_LABEL_SIZE = 28
+    COLORBAR_LABEL_SIZE = 24
     COLORBAR_TICK_SIZE = 20
     
     # Set up variables
@@ -322,12 +324,28 @@ def filedPlots(phc,phcOG,gme,gmeOG,params):
     fields, _, _ = gme.get_field_xy('E', kindex, mode, z, ygrid=ys, component='xyz')
     eabs = np.abs(np.conj(fields['x'])*fields['x'] + np.conj(fields['y'])*fields['y'] + np.conj(fields['z'])*fields['z'])
     maxF = np.max([np.max(eabsOG), np.max(eabs)])
-    print(1/np.max(eabsOG), 1/np.max(eabs))
 
+    epsOG = legume.viz.eps_xy(phcOG,Nx = 100,Ny = 100,plot=False)
+    eps = legume.viz.eps_xy(phc,Nx = 100,Ny = 100,plot=False)
+    fOG, _, _ = gmeOG.get_field_xy('E', kindex, mode, z,Ny = 100,Nx = 100, component='xyz')
+    eOG = np.abs(np.conj(fOG['x'])*fOG['x'] + np.conj(fOG['y'])*fOG['y'] + np.conj(fOG['z'])*fOG['z'])
+    f, _, _ = gme.get_field_xy('E', kindex, mode, z,Ny = 100,Nx = 100, component='xyz')
+    e = np.abs(np.conj(f['x'])*f['x'] + np.conj(f['y'])*f['y'] + np.conj(f['z'])*f['z'])
+    vOG = 1/np.max(eOG*epsOG)
+    v = 1/np.max(e*eps)
+    print(r"Mode volume $\lambda^3$: (OG,Opt) ",vOG*(gmeOG.freqs[kindex,mode]*2*np.pi)**3, v*(gme.freqs[kindex,mode]*2*np.pi)**3)
+    print(r"Mode volume $\mu m^3$: (OG,Opt) ",vOG/.266**3, v/.266**3)
+
+    #calculate the maximum percell enhancement
+    ng_OG = np.abs(NG(gmeOG,kindex,mode))
+    ng_ = np.abs(NG(gme,kindex,mode))
+    cPF = 3*np.pi*(3E8)**2*266E-9/(12**(3/2))
+    conFac = 2*np.pi*299792458/params['cost']['a']/1e-9
+    print(r"Maximum percell enhancement: (OG,Opt) ",cPF*ng_OG/(vOG*(266E-9)**3)/(gmeOG.freqs[kindex,mode]*conFac)**2,cPF*ng_/(v*(266E-9)**3)/(gme.freqs[kindex,mode]*conFac)**2)
     # Create a figure with two subplots stacked vertically
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5, 3))
     
-    # Optional parameters to control the field view
+    # Optional parameters to control the field view|
     x_offset = 0  # Adjust to shift the center of the view left or right
     x_crop = 0    # Adjust to crop from the right side (0 for no cropping)
     
@@ -337,7 +355,7 @@ def filedPlots(phc,phcOG,gme,gmeOG,params):
     
     # Plot original field on top subplot
     cax1 = ax1.imshow(eabsOG.T, extent=[-ylim/2, ylim/2, -.5, .5], cmap='plasma', vmax=maxF, vmin=0)
-    ax1.set_title('Original', fontsize=TITLE_SIZE)
+    ax1.set_title('Original', fontsize=TITLE_SIZE,pad=10)
     circles1 = [Circle((-s.y_cent, s.x_cent), s.r, edgecolor='white', facecolor='none', linewidth=3) for s in phcOG.layers[0].shapes]
     cirlcesArround1 = [Circle((0, 0), s.r, edgecolor='white', facecolor='none', linewidth=3) for s in phcOG.layers[0].shapes]
     for c, ca in zip(circles1, cirlcesArround1):
@@ -351,7 +369,7 @@ def filedPlots(phc,phcOG,gme,gmeOG,params):
     
     # Plot optimized field on bottom subplot
     cax2 = ax2.imshow(eabs.T, extent=[-ylim/2, ylim/2, -.5, .5], cmap='plasma', vmax=maxF, vmin=0)
-    ax2.set_title('Optimized', fontsize=TITLE_SIZE)
+    ax2.set_title('Optimized', fontsize=TITLE_SIZE, pad=10)  # Added pad parameter to move title up
     circles2 = [Circle((-s.y_cent, s.x_cent), s.r, edgecolor='white', facecolor='none', linewidth=3) for s in phc.layers[0].shapes]
     cirlcesArround2 = [Circle((0, 0), s.r, edgecolor='white', facecolor='none', linewidth=3) for s in phc.layers[0].shapes]
     for c, ca in zip(circles2, cirlcesArround2):
@@ -366,8 +384,10 @@ def filedPlots(phc,phcOG,gme,gmeOG,params):
     # Add a single colorbar for both plots
     cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])  # Position for the colorbar
     cbar = fig.colorbar(cax1, cax=cbar_ax)
-    cbar.set_label(r"$|\mathbf{E}|$", rotation=0, labelpad=20, fontsize=COLORBAR_LABEL_SIZE)
+    cbar.set_label(r"$|\mathbf{e}_{\tilde k=0.33}|^2$ [a$^{-3}$]", rotation=90, labelpad=20, fontsize=COLORBAR_LABEL_SIZE)
     cbar.ax.tick_params(labelsize=COLORBAR_TICK_SIZE)
+    # Format the tick labels to show 0 instead of 0.0 while keeping other decimals
+    cbar.ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: '0' if x == 0 else f'{x:.1f}'))
     
     # Adjust layout
     plt.tight_layout(rect=[0, 0, 0.9, 1])  # Make room for colorbar
@@ -376,124 +396,298 @@ def filedPlots(phc,phcOG,gme,gmeOG,params):
 filedPlots(phc,phcOG,gme,gmeOG,out[-1])
 filedPlots(phcW1,phcW1OG,gmeW1,gmeW1OG,out[-1])
 #%%
-def lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG):
-    # Font size parameters
-    TITLE_SIZE = 30
-    LABEL_SIZE = 30
-    LEGEND_SIZE = 28
-    MARKER_SIZE = 30
-    TICK_SIZE = 26
+def lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
+    # Plot styling parameters
+    STYLE = {
+        'font_sizes': {
+            'title': 30,
+            'label': 36,
+            'legend': 32,
+            'marker': 30,
+            'tick': 30,
+            'annotation': 36  # For the a, b, a', b' labels
+        },
+        'colors': {
+            'optimized': '#EE7733',  # orange
+            'original': '#0077BB'    # blue
+        },
+        'line': {
+            'width': 3
+        },
+        'scatter': {
+            'size': 150,
+            'edge_width': 1.5,
+            'zorder': 3
+        },
+        'axes': {
+            'x_lim': (3, 200),
+            'y_lim': (1E-3, 1E-1),
+            #'x_lim': (2.5,10000),
+            #'y_lim': (2.5E-4,1E-2),
+            'legend_bbox': (1,1)
+        },
+        'figure': {
+            'dpi': 300  # Increased DPI for higher resolution
+        },
+        'ticks': {
+            'major_length': 10,
+            'major_width': 2,
+            'minor_length': 5,
+            'minor_width': 1.5
+        }
+    }
+    plt.close('all')
+    # Create figure with higher DPI
+    plt.figure(dpi=STYLE['figure']['dpi'])
     
-    orange = '#EE7733'
-    blue = '#0077BB'
-
-    ks = [24,113,15,149]
-    #ks = [39,84,13,89]
-
-    plt.plot(ngOG[ks[2]:],alphasOG[ks[2]:]/266/1E-7,color=blue,label='Original',linewidth=3)
-    plt.plot(ng[ks[0]:],alphas[ks[0]:]/266/1E-7,color=orange,label='Optimized',linewidth=3)
-    kindex = 50
-    # Add letters to mark the beginning and ending of each line
-    plt.text(ng[ks[0]]+4, alphas[ks[0]]/266/1E-7, r'$a^\prime$', color=orange, fontsize=24, fontweight='bold', ha='right', va='bottom')
-    plt.text(ng[ks[1]-1]+4, alphas[ks[1]-1]/266/1E-7+.0015, r'$b^\prime$', color=orange, fontsize=24, fontweight='bold', ha='left', va='top')
+    # Extract parameters for cleaner code
+    fs = STYLE['font_sizes']
+    colors = STYLE['colors']
     
-    plt.text(ngOG[ks[2]]+2, alphasOG[ks[2]]/266/1E-7-.0006, r'$a$', color=blue, fontsize=24, fontweight='bold', ha='right', va='bottom')
-    plt.text(ngOG[ks[3]-1]+100, alphasOG[ks[3]-1]/266/1E-7+.0015, r'$b$', color=blue, fontsize=24, fontweight='bold', ha='left', va='top')
+    if crystal == 'W1':
+        ks = [24,113,15,149]
+    elif crystal == 'ZIW':
+        ks = [39,84,13,89]
 
-    #plt.text(ng[ks[0]]+2.5, alphas[ks[0]]/266/1E-7-.001, r'$c^\prime$', color=orange, fontsize=MARKER_SIZE, fontweight='bold', ha='right', va='bottom')
-    #plt.text(ng[ks[1]-1]-1, alphas[ks[1]-1]/266/1E-7+.003, r'$d^\prime$', color=orange, fontsize=MARKER_SIZE, fontweight='bold', ha='left', va='top')
+    # Plot lines
+    plt.plot(ngOG[ks[2]:], alphasOG[ks[2]:]/266/1E-7, 
+             color=colors['original'], label='Original', 
+             linewidth=STYLE['line']['width'])
+    plt.plot(ng[ks[0]:], alphas[ks[0]:]/266/1E-7, 
+             color=colors['optimized'], label='Optimized', 
+             linewidth=STYLE['line']['width'])
+
+    # Add annotation labels
+    if crystal == 'W1':
+        annotations = [
+            # Optimized (orange) annotations
+            {'x': ng[ks[0]]+4, 'y': alphas[ks[0]]/266/1E-7+.00005, 
+             'text': r'$\mathbf{a}^\prime$', 'color': colors['optimized'], 
+             'ha': 'right', 'va': 'bottom'},
+            {'x': ng[ks[1]-1]+10, 'y': alphas[ks[1]-1]/266/1E-7+.002, 
+             'text': r'$\mathbf{b}^\prime$', 'color': colors['optimized'], 
+             'ha': 'left', 'va': 'top'},
+            # Original (blue) annotations
+            {'x': ngOG[ks[2]]+.3, 'y': alphasOG[ks[2]]/266/1E-7+.0002, 
+             'text': r'$\mathbf{a}$', 'color': colors['original'], 
+             'ha': 'right', 'va': 'bottom'},
+            {'x': ngOG[ks[3]-1], 'y': alphasOG[ks[3]-1]/266/1E-7+.0025, 
+             'text': r'$\mathbf{b}$', 'color': colors['original'], 
+             'ha': 'left', 'va': 'top'}
+        ]
+    elif crystal == 'ZIW':
+        annotations = [
+            # Optimized (orange) annotations
+            {'x': ng[ks[0]]+3, 'y': alphas[ks[0]]/266/1E-7-.001, 
+             'text': r'$\mathbf{c}^\prime$', 'color': colors['optimized'], 
+             'ha': 'right', 'va': 'bottom'},
+            {'x': ng[ks[1]-1]-1, 'y': alphas[ks[1]-1]/266/1E-7+.0035, 
+             'text': r'$\mathbf{d}^\prime$', 'color': colors['optimized'], 
+             'ha': 'left', 'va': 'top'},
+            # Original (blue) annotations
+            {'x': ngOG[ks[2]]+40, 'y': alphasOG[ks[2]]/266/1E-7-.0006, 
+             'text': r'$\mathbf{c}$', 'color': colors['original'], 
+             'ha': 'right', 'va': 'bottom'},
+            {'x': ngOG[ks[3]-1]-1.25, 'y': alphasOG[ks[3]-1]/266/1E-7+.002, 
+             'text': r'$\mathbf{d}$', 'color': colors['original'], 
+             'ha': 'left', 'va': 'top'}
+        ]
+
+    for ann in annotations:
+        plt.text(ann['x'], ann['y'], ann['text'], 
+                color=ann['color'], fontsize=fs['annotation'], 
+                fontweight='bold', ha=ann['ha'], va=ann['va'])
+
+    # Add scatter points
+    plt.scatter([ng[ks[0]], ng[ks[1]-1]], 
+                [alphas[ks[0]]/266/1E-7, alphas[ks[1]-1]/266/1E-7],
+                s=STYLE['scatter']['size'], color=colors['optimized'],
+                zorder=STYLE['scatter']['zorder'], edgecolor='black', 
+                linewidth=STYLE['scatter']['edge_width'])
     
-    #plt.text(ngOG[ks[2]]+25, alphasOG[ks[2]]/266/1E-7+.0005, r'$c$', color=blue, fontsize=MARKER_SIZE, fontweight='bold', ha='right', va='bottom')
-    #plt.text(ngOG[ks[3]-1]-1.25, alphasOG[ks[3]-1]/266/1E-7+.008, r'$d$', color=blue, fontsize=MARKER_SIZE, fontweight='bold', ha='left', va='top')
+    plt.scatter([ngOG[ks[2]], ngOG[ks[3]-1]], 
+                [alphasOG[ks[2]]/266/1E-7, alphasOG[ks[3]-1]/266/1E-7],
+                s=STYLE['scatter']['size'], color=colors['original'],
+                zorder=STYLE['scatter']['zorder'], edgecolor='black', 
+                linewidth=STYLE['scatter']['edge_width'])
 
-    plt.scatter([ng[ks[0]],ng[ks[1]-1]],[alphas[ks[0]]/266/1E-7,alphas[ks[1]-1]/266/1E-7],s=150,color=orange,zorder=3,edgecolor='black', linewidth=1.5)
-    plt.scatter([ngOG[ks[2]],ngOG[ks[3]-1]],[alphasOG[ks[2]]/266/1E-7,alphasOG[ks[3]-1]/266/1E-7],s=150,color=blue,zorder=3,edgecolor='black', linewidth=1.5)
-    #plt.ylim(1E-3,1E-1)
-    #plt.xlim(3.1,200)
-
-    plt.ylim(2.5E-4,1E-2)
-    plt.xlim(3.1,10000)
+    # Set axes properties
+    plt.ylim(STYLE['axes']['y_lim'])
+    plt.xlim(STYLE['axes']['x_lim'])
     plt.xscale('log')
     plt.yscale('log')
-    plt.legend(bbox_to_anchor=(.35, .4), frameon=False, fontsize=LEGEND_SIZE)
-    plt.xlabel(r"Group Index $n_g$", fontsize=LABEL_SIZE)
-    plt.ylabel(r"Loss $\langle\alpha_{\text{back}}\rangle/n_g^2$ [cm$^{-1}$]", fontsize=LABEL_SIZE)
-    plt.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+    
+    # Add labels
+    plt.xlabel(r"Group Index $n_g$", fontsize=fs['label'])
+    
+    # Set y-label based on crystal type
+    plt.ylabel(rf"$\tilde L^{{\text{{{crystal}}}}}$ [cm$^{{-1}}$]", fontsize=fs['label'])
+    
+    # Add legend for W1 crystal
+    if crystal == 'W1':
+        plt.legend(loc='lower right', frameon=False, fontsize=fs['legend'])
+        # Set custom x-axis labels for major ticks
+        ax.set_xticks([10**1, 10**2, 10**3, 10**4])
+        ax.set_xticklabels(['$10^1$', '$10^2$', '$10^3$', '$10^4$'])
+    
+    # Configure tick parameters for both major and minor ticks
+    plt.tick_params(axis='both', which='major', 
+                   labelsize=fs['tick'],
+                   length=STYLE['ticks']['major_length'],
+                   width=STYLE['ticks']['major_width'])
+    plt.tick_params(axis='both', which='minor',
+                   length=STYLE['ticks']['minor_length'],
+                   width=STYLE['ticks']['minor_width'])
+    
+    # Force minor ticks on x-axis by setting subs and numticks
+    ax = plt.gca()
+    ax.xaxis.set_minor_locator(plt.LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=100))
+    ax.yaxis.set_minor_locator(plt.LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=100))
+    
+    # Add grid for both crystal types
+    plt.grid(True, which='minor', alpha=0.2)
+    plt.grid(True, which='major', alpha=0.4)
+    
     plt.show()
 
-#lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG)
-lossVng(phcW1,gmeW1,alphasW1,ngW1,phcW1OG,gmeW1OG,alphasW1OG,ngW1OG)
+lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,'ZIW')
+#lossVng(phcW1,gmeW1,alphasW1,ngW1,phcW1OG,gmeW1OG,alphasW1OG,ngW1OG,'W1')
 
 #%%
-def lossVfreq(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG):
-    # Font size parameters
-    TITLE_SIZE = 30
-    LABEL_SIZE = 30
-    LEGEND_SIZE = 28
-    MARKER_SIZE = 30
-    TICK_SIZE = 26
-    TEXT_SIZE = 30
-    
-    orange = '#EE7733'
-    blue = '#0077BB'
+def lossVfreq(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
+    # Style parameters
+    STYLE = {
+        'font_sizes': {
+            'title': 30,
+            'label': 36,
+            'legend': 28,
+            'marker': 30,
+            'tick': 30,
+            'annotation': 36 
+        },
+        'colors': {
+            'optimized': '#EE7733',  # orange
+            'original': '#0077BB'    # blue
+        },
+        'plot': {
+            'linewidth': 3,
+            'scatter_size': 120,
+            'scatter_zorder': 10,
+            'scatter_edge_width': 1.5,
+            'scatter_edge_color': 'black'
+        },
+        'axes': {
+            #'y_lim': (2.5E-4, 1E-2),
+            'y_lim': (1E-3,1E-1),
+            'legend_bbox': (.7, .37)
+        },
+        'ticks': {
+            'major_length': 10,
+            'major_width': 2,
+            'minor_length': 5,
+            'minor_width': 1.5
+        }
+    }
 
-    #ks = [24,113,15,149]
-    ks = [39,84,13,89]
+    # Key points to plot
+    if crystal == 'W1':
+        ks = [24,113,15,149]
+    elif crystal == 'ZIW':
+        ks = [39, 84, 13, 89]
 
-    plt.plot(gmeOG.freqs[ks[2]:,20],alphasOG[ks[2]:]/266/1E-7,color=blue,label='Original',linewidth=3)
-    plt.plot(gme.freqs[ks[0]:,20],alphas[ks[0]:]/266/1E-7,color=orange,label='Optimized',linewidth=3)
-    kindex = 50
+    # Plot lines
+    plt.plot(gmeOG.freqs[ks[2]:,20], alphasOG[ks[2]:]/266/1E-7, 
+             color=STYLE['colors']['original'], label='Original', 
+             linewidth=STYLE['plot']['linewidth'])
+    plt.plot(gme.freqs[ks[0]:,20], alphas[ks[0]:]/266/1E-7, 
+             color=STYLE['colors']['optimized'], label='Optimized', 
+             linewidth=STYLE['plot']['linewidth'])
 
+    # ZIW labels
+    if crystal == 'W1':
+        annotations = [
+            {'x': gme.freqs[ks[0],20]-.00075, 'y': alphas[ks[0]]/266/1E-7,
+             'text': r'$\mathbf{a}^\prime$', 'color': STYLE['colors']['optimized'],
+             'ha': 'center', 'va': 'bottom'},
+            {'x': gme.freqs[ks[1],20], 'y': alphas[ks[1]-1]/266/1E-7+.0035,
+             'text': r'$\mathbf{b}^\prime$', 'color': STYLE['colors']['optimized'],
+             'ha': 'left', 'va': 'top'},
+            {'x': gmeOG.freqs[ks[2],20]-.001, 'y': alphasOG[ks[2]]/266/1E-7,
+             'text': r'$\mathbf{a}$', 'color': STYLE['colors']['original'],
+             'ha': 'right', 'va': 'bottom'},
+            {'x': gmeOG.freqs[ks[3],20]+.001, 'y': alphasOG[ks[3]]/266/1E-7,
+             'text': r'$\mathbf{b}$', 'color': STYLE['colors']['original'],
+             'ha': 'left', 'va': 'top'}
+        ]
+    elif crystal == 'ZIW':
+        annotations = [
+            {'x': gme.freqs[ks[0],20]-.00075, 'y': alphas[ks[0]]/266/1E-7,
+             'text': r'$\mathbf{c}^\prime$', 'color': STYLE['colors']['optimized'],
+             'ha': 'center', 'va': 'bottom'},
+            {'x': gme.freqs[ks[1],20], 'y': alphas[ks[1]-1]/266/1E-7+.004,
+             'text': r'$\mathbf{d}^\prime$', 'color': STYLE['colors']['optimized'],
+             'ha': 'left', 'va': 'top'},
+            {'x': gmeOG.freqs[ks[2],20]-.001, 'y': alphasOG[ks[2]]/266/1E-7,
+             'text': r'$\mathbf{c}$', 'color': STYLE['colors']['original'],
+             'ha': 'right', 'va': 'bottom'},
+            {'x': gmeOG.freqs[ks[3],20]+.001, 'y': alphasOG[ks[3]]/266/1E-7+.015,
+             'text': r'$\mathbf{d}$', 'color': STYLE['colors']['original'],
+             'ha': 'left', 'va': 'top'}
+        ]
 
-    # Add text labels (W1 labewls)
-    #plt.text(gme.freqs[ks[0],20]+.001, alphas[ks[0]]/266/1E-7, r'$a^\prime$', color=orange, fontsize=TEXT_SIZE, fontweight='bold', ha='center', va='bottom')
-    #plt.text(gme.freqs[ks[1],20]+.0004, alphas[ks[1]-1]/266/1E-7+.003, r'$b^\prime$', color=orange, fontsize=TEXT_SIZE, fontweight='bold', ha='left', va='top')
-    
-    #plt.text(gmeOG.freqs[ks[2],20], alphasOG[ks[2]]/266/1E-7+.0001, r'$a$', color=blue, fontsize=TEXT_SIZE, fontweight='bold', ha='right', va='bottom')
-    #plt.text(gmeOG.freqs[ks[3],20]+.0005, alphasOG[ks[3]]/266/1E-7+.0003, r'$b$', color=blue, fontsize=TEXT_SIZE, fontweight='bold', ha='left', va='top')
-    
-    #ZIW labels
-    plt.text(gme.freqs[ks[0],20]-.00075, alphas[ks[0]]/266/1E-7, r'$c^\prime$', color=orange, fontsize=TEXT_SIZE, fontweight='bold', ha='center', va='bottom')
-    plt.text(gme.freqs[ks[1],20], alphas[ks[1]-1]/266/1E-7+.003, r'$d^\prime$', color=orange, fontsize=TEXT_SIZE, fontweight='bold', ha='left', va='top')
-    
-    plt.text(gmeOG.freqs[ks[2],20]-.001, alphasOG[ks[2]]/266/1E-7, r'$c$', color=blue, fontsize=TEXT_SIZE, fontweight='bold', ha='right', va='bottom')
-    plt.text(gmeOG.freqs[ks[3],20], alphasOG[ks[3]]/266/1E-7+.015, r'$d$', color=blue, fontsize=TEXT_SIZE, fontweight='bold', ha='left', va='top')
+    for ann in annotations:
+        plt.text(ann['x'], ann['y'], ann['text'],
+                color=ann['color'], fontsize=STYLE['font_sizes']['annotation'],
+                fontweight='bold', ha=ann['ha'], va=ann['va'])
 
+    # Add scatter points
+    scatter_points = [
+        (gme.freqs[ks[0],20], alphas[ks[0]]/266/1E-7, STYLE['colors']['optimized']),
+        (gme.freqs[ks[1],20], alphas[ks[1]-1]/266/1E-7, STYLE['colors']['optimized']),
+        (gmeOG.freqs[ks[2],20], alphasOG[ks[2]]/266/1E-7, STYLE['colors']['original']),
+        (gmeOG.freqs[ks[3],20], alphasOG[ks[3]]/266/1E-7, STYLE['colors']['original'])
+    ]
 
-    # Add points at each location
-    plt.scatter(gme.freqs[ks[0],20], alphas[ks[0]]/266/1E-7, color=orange, s=120, zorder=10, edgecolor='black', linewidth=1.5)
-    plt.scatter(gme.freqs[ks[1],20], alphas[ks[1]-1]/266/1E-7, color=orange, s=120, zorder=10, edgecolor='black', linewidth=1.5)
-    
-    plt.scatter(gmeOG.freqs[ks[2],20], alphasOG[ks[2]]/266/1E-7, color=blue, s=120, zorder=10, edgecolor='black', linewidth=1.5)
-    plt.scatter(gmeOG.freqs[ks[3],20], alphasOG[ks[3]]/266/1E-7, color=blue, s=120, zorder=10, edgecolor='black', linewidth=1.5)
+    for x, y, color in scatter_points:
+        plt.scatter(x, y, color=color, s=STYLE['plot']['scatter_size'],
+                   zorder=STYLE['plot']['scatter_zorder'],
+                   edgecolor=STYLE['plot']['scatter_edge_color'],
+                   linewidth=STYLE['plot']['scatter_edge_width'])
 
-    #W1 limits
-    #plt.ylim(1E-4,1E-2)  # Increased upper limit to provide more space at the top
-
-    #ZIW limits
-    plt.ylim(.8E-3,1E-1)
-
+    # Set axes properties
+    plt.ylim(STYLE['axes']['y_lim'])
     plt.yscale('log')
-    # Remove minor ticks for log scale
-    #plt.gca().yaxis.set_minor_locator(plt.NullLocator())
-    plt.legend(bbox_to_anchor=(.7, .37), frameon=False, fontsize=LEGEND_SIZE)
-    plt.xlabel(r"Frequency $\omega a / 2\pi c$", fontsize=LABEL_SIZE)
-    plt.ylabel(r"Loss $\langle\alpha_{\text{back}}\rangle/n_g^2$ [cm$^{-1}$]", fontsize=LABEL_SIZE)
-    plt.tick_params(axis='both', which='major', labelsize=TICK_SIZE)
+    plt.xlabel(r"Frequency $\omega a / 2\pi c$",
+              fontsize=STYLE['font_sizes']['label'])
+
+    # Configure tick parameters for both major and minor ticks
+    plt.tick_params(axis='both', which='major', 
+                   labelsize=STYLE['font_sizes']['tick'],
+                   length=STYLE['ticks']['major_length'],
+                   width=STYLE['ticks']['major_width'])
+    plt.tick_params(axis='both', which='minor',
+                   length=STYLE['ticks']['minor_length'],
+                   width=STYLE['ticks']['minor_width'])
+
+    # Add grid
+    plt.grid(True, which='minor', alpha=0.2)
+    plt.grid(True, which='major', alpha=0.4)
+
     plt.show()
 
-#lossVfreq(phcW1,gmeW1,alphasW1,ngW1,phcW1OG,gmeW1OG,alphasW1OG,ngW1OG)
-lossVfreq(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG)
+#lossVfreq(phcW1,gmeW1,alphasW1,ngW1,phcW1OG,gmeW1OG,alphasW1OG,ngW1OG,'W1')
+lossVfreq(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,'ZIW')
 
 #%%
+print(len(ngW1))
 #%%
-with open('/Users/dominic/Desktop/optGME/tests/media/ginds3/ziwBest.json','r') as file:
+with open('/home/dominic/Desktop/optGME/optGME/tests/media/ginds3/ziwBest.json','r') as file:
     out = json.load(file)
 
 phc,gme,alphas,ng = runSims(np.array(out[-1]['result']['x']),ZIW,out[-1])
 phcOG,gmeOG,alphasOG,ngOG = runSims(ZIWVars(),ZIW,out[-1]) 
 #%%
-with open('/Users/dominic/Desktop/optGME/tests/media/ginds3/W1Best.json','r') as file:
+with open('/home/dominic/Desktop/optGME/optGME/tests/media/ginds3/W1Best.json','r') as file:
     out = json.load(file)
 
 phcW1,gmeW1,alphasW1,ngW1 = runSims(np.array(out[-1]['result']['x']),W1,out[-1])

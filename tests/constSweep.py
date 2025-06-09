@@ -108,6 +108,8 @@ if __name__=='__main__':
     indexsB = [[10,45],[10,30],[10,20]]
     for j in np.arange(50):
         for i,ng in enumerate(ngs):
+            if j<=3:
+                continue
             input = {'path':f"./media/w1/sweepNG/ng{ng}_{j}.json",'ng':ng,'key':j,'index':indexs[i],'indexB':indexsB[i],'indexA':indexsA[i]}
             minim = worker_function(input)  # Compute the result
 # %%
