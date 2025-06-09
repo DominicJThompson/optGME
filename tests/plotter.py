@@ -903,12 +903,25 @@ for p in outZIW[:-1]:
     ZIWCV.append(p['constraint_violation'])
 
 W1opt = 10**(np.array(W1opt))/266/1E-7
+W1optPlot = np.array(W1opt)/W1opt[0]
 ZIWopt = 10**(np.array(ZIWopt))/266/1E-7
+ZIWoptPlot = np.array(ZIWopt)/ZIWopt[0]
 # %%
 # Create separate figures for W1 and ZIW optimization plots
+# Control font size, figure dimensions and DPI at the top level
+FONT_SIZE_TITLE = 18
+FONT_SIZE_AXIS_LABEL = 18
+FONT_SIZE_TICK_LABELS = 15
+FONT_SIZE_ANNOTATION = 16
+FIGURE_WIDTH = 7
+FIGURE_HEIGHT = 4
+FIGURE_DPI = 300
+FIGURE_ASPECT_RATIO = 0.65  # height/width ratio
+LINEWIDTH = 2.5
+MARKER_SIZE = 6
 
 # First figure: W1 Optimization
-fig1, ax1 = plt.subplots(figsize=(5, 4))
+fig1, ax1 = plt.subplots(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT), dpi=FIGURE_DPI)
 
 # Set log scales for W1 plot
 ax1.set_yscale('log')
@@ -919,7 +932,7 @@ violation_regions_w1 = []
 start = None
 
 # Find continuous regions of constraint violations for W1
-for i in range(len(W1opt)):
+for i in range(len(W1optPlot)):
     if W1CV[i] > 0 and start is None:
         start = i
     elif W1CV[i] <= 0 and start is not None:
@@ -928,57 +941,57 @@ for i in range(len(W1opt)):
 
 # Add the last region if it extends to the end
 if start is not None:
-    violation_regions_w1.append((start, len(W1opt)))
+    violation_regions_w1.append((start, len(W1optPlot)))
 
 # Add dashed horizontal lines for initial and final values for W1
-initial_value_w1 = W1opt[0]
-final_value_w1 = W1opt[-1]
+initial_value_w1 = W1optPlot[0]
+final_value_w1 = W1optPlot[-1]
 ax1.axhline(y=initial_value_w1, color='k', linestyle='--', alpha=0.7, zorder=0)
 ax1.axhline(y=final_value_w1, color='k', linestyle='--', alpha=0.7, zorder=0)
 
 # Plot W1 optimization data
-x_values = np.arange(1, len(W1opt) + 1)  # Start from 1 for log scale
+x_values = np.arange(1, len(W1optPlot) + 1)  # Start from 1 for log scale
 
 # Plot base line first
-ax1.plot(x_values, W1opt, 'b-', linewidth=2.5, zorder=2)
+ax1.plot(x_values, W1optPlot, 'b-', linewidth=LINEWIDTH, zorder=2)
 
 # Add markers with different colors based on constraint violation
-for i, val in enumerate(W1opt):
+for i, val in enumerate(W1optPlot):
     idx = i + 1  # Adjust for 1-based indexing in plot
     in_violation = any(start <= i < end for start, end in violation_regions_w1)
     if in_violation:
-        ax1.plot(idx, val, 'ro', markersize=4, zorder=3)
+        ax1.plot(idx, val, 'ro', markersize=MARKER_SIZE, zorder=3, markeredgecolor='darkred', fillstyle='none')
     else:
-        ax1.plot(idx, val, 'o', markersize=4, markerfacecolor='blue', markeredgecolor='darkblue', zorder=3)
+        ax1.plot(idx, val, 'o', markersize=MARKER_SIZE, markeredgecolor='darkblue', zorder=3, fillstyle='none')
 
 # Add violation regions
 for start, end in violation_regions_w1:
     ax1.axvspan(start + 1, end + 1, alpha=0.2, color='#FF000080', edgecolor=None)
 
 # Add labels for initial and final values for W1, formatted for small numbers
-ax1.text(len(W1opt)*0.1, initial_value_w1*1.2, f'Initial: {initial_value_w1:.5f}', 
-         verticalalignment='bottom', horizontalalignment='right', fontsize=14, 
+ax1.text(len(W1optPlot)*0.1, initial_value_w1*1.2, f'Initial: {W1opt[0]:.5f}', 
+         verticalalignment='bottom', horizontalalignment='right', fontsize=FONT_SIZE_ANNOTATION, 
          bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
-ax1.text(len(W1opt)*0.1, final_value_w1*0.8, f'Final: {final_value_w1:.5f}', 
-         verticalalignment='top', horizontalalignment='right', fontsize=14,
+ax1.text(len(W1optPlot)*0.1, final_value_w1*0.8, f'Final: {W1opt[-1]:.5f}', 
+         verticalalignment='top', horizontalalignment='right', fontsize=FONT_SIZE_ANNOTATION,
          bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
 
-ax1.set_title('W1 Optimization', fontsize=18, fontweight='bold')
-ax1.set_xlabel('Iteration', fontsize=16)
-ax1.set_ylabel(r'Loss $\langle\alpha_{back}\rangle/n_g^2$ [cm$^{-1}$]', fontsize=16)
-ax1.set_xlim(1, len(W1opt))  # Start from 1 for log scale
+ax1.set_title('W1 Optimization', fontsize=FONT_SIZE_TITLE, fontweight='bold')
+ax1.set_xlabel('Iteration', fontsize=FONT_SIZE_AXIS_LABEL)
+ax1.set_ylabel(r'$\left[\tilde{L}^{\text{W1}}/\tilde{L}^{\text{W1}}_0\right]_{\tilde{k}=.33}$', fontsize=FONT_SIZE_AXIS_LABEL)
+ax1.set_xlim(1, len(W1optPlot))  # Start from 1 for log scale
 ax1.grid(True, linestyle='--', alpha=0.3, which='both')
-ax1.tick_params(axis='both', which='major', labelsize=13)
-ax1.set_ylim(.9E-4,6.5E-3)
+ax1.tick_params(axis='both', which='major', labelsize=FONT_SIZE_TICK_LABELS)
+ax1.set_ylim(.07, 3)
 
-# Make the plot square by adjusting the aspect ratio
-ax1.set_box_aspect(0.8)
+# Make the plot wider
+ax1.set_box_aspect(FIGURE_ASPECT_RATIO)
 
 plt.tight_layout()
 plt.show()
 
 # Second figure: ZIW Optimization
-fig2, ax2 = plt.subplots(figsize=(5, 4))
+fig2, ax2 = plt.subplots(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT), dpi=FIGURE_DPI)
 
 # Set log scales for ZIW plot
 ax2.set_yscale('log')
@@ -989,7 +1002,7 @@ violation_regions_ziw = []
 start = None
 
 # Find continuous regions of constraint violations for ZIW
-for i in range(len(ZIWopt)):
+for i in range(len(ZIWoptPlot)):
     if ZIWCV[i] > 0 and start is None:
         start = i
     elif ZIWCV[i] <= 0 and start is not None:
@@ -998,51 +1011,301 @@ for i in range(len(ZIWopt)):
 
 # Add the last region if it extends to the end
 if start is not None:
-    violation_regions_ziw.append((start, len(ZIWopt)))
+    violation_regions_ziw.append((start, len(ZIWoptPlot)))
 
 # Add dashed horizontal lines for initial and final values for ZIW
-initial_value_ziw = ZIWopt[0]
-final_value_ziw = ZIWopt[-1]
+initial_value_ziw = ZIWoptPlot[0]
+final_value_ziw = ZIWoptPlot[-1]
 ax2.axhline(y=initial_value_ziw, color='k', linestyle='--', alpha=0.7, zorder=0)
 ax2.axhline(y=final_value_ziw, color='k', linestyle='--', alpha=0.7, zorder=0)
 
 # Plot ZIW optimization data
-x_values = np.arange(1, len(ZIWopt) + 1)  # Start from 1 for log scale
+x_values = np.arange(1, len(ZIWoptPlot) + 1)  # Start from 1 for log scale
 
 # Plot base line first
-ax2.plot(x_values, ZIWopt, 'g-', linewidth=2.5, zorder=2)
+ax2.plot(x_values, ZIWoptPlot, 'g-', linewidth=LINEWIDTH, zorder=2)
 
 # Add markers with different colors based on constraint violation
-for i, val in enumerate(ZIWopt):
+for i, val in enumerate(ZIWoptPlot):
     idx = i + 1  # Adjust for 1-based indexing in plot
     in_violation = any(start <= i < end for start, end in violation_regions_ziw)
     if in_violation:
-        ax2.plot(idx, val, 'ro', markersize=4, zorder=3)
+        ax2.plot(idx, val, 'ro', markersize=MARKER_SIZE, zorder=3, markeredgecolor='darkred', fillstyle='none')
     else:
-        ax2.plot(idx, val, 'o', markersize=4, markerfacecolor='green', markeredgecolor='darkgreen', zorder=3)
+        ax2.plot(idx, val, 'o', markersize=MARKER_SIZE, markeredgecolor='darkgreen', zorder=3, fillstyle='none')
 
 # Add violation regions
 for start, end in violation_regions_ziw:
     ax2.axvspan(start + 1, end + 1, alpha=0.2, color='#FF000080', edgecolor=None)
 
 # Add labels for initial and final values for ZIW, formatted for small numbers
-ax2.text(len(ZIWopt)*0.9, initial_value_ziw*1.2, f'Initial: {initial_value_ziw:.5f}', 
-         verticalalignment='bottom', horizontalalignment='right', fontsize=14,
+ax2.text(len(ZIWoptPlot)*0.9, initial_value_ziw*1.2, f'Initial: {ZIWopt[0]:.5f}', 
+         verticalalignment='bottom', horizontalalignment='right', fontsize=FONT_SIZE_ANNOTATION,
          bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
-ax2.text(len(ZIWopt)*0.9, final_value_ziw*0.8, f'Final: {final_value_ziw:.5f}', 
-         verticalalignment='top', horizontalalignment='right', fontsize=14,
+ax2.text(len(ZIWoptPlot)*0.9, final_value_ziw*0.75, f'Final: {ZIWopt[-1]:.5f}', 
+         verticalalignment='top', horizontalalignment='right', fontsize=FONT_SIZE_ANNOTATION,
          bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
 
-ax2.set_title('ZIW Optimization', fontsize=18, fontweight='bold')
-ax2.set_xlabel('Iteration', fontsize=16)
-ax2.set_ylabel(r'Loss $\langle\alpha_{back}\rangle/n_g^2$ [cm$^{-1}$]', fontsize=16)
-ax2.set_xlim(1, len(ZIWopt))  # Start from 1 for log scale
+ax2.set_title('ZIW Optimization', fontsize=FONT_SIZE_TITLE, fontweight='bold')
+ax2.set_xlabel('Iteration', fontsize=FONT_SIZE_AXIS_LABEL)
+ax2.set_ylabel(r'$\left[\tilde{L}^{\text{ZIW}}/\tilde{L}^{\text{ZIW}}_0\right]_{\tilde{k}=.33}$', fontsize=FONT_SIZE_AXIS_LABEL)
+ax2.set_xlim(1, len(ZIWoptPlot))  # Start from 1 for log scale
 ax2.grid(True, linestyle='--', alpha=0.3, which='both')
-ax2.tick_params(axis='both', which='major', labelsize=13)
+ax2.tick_params(axis='both', which='major', labelsize=FONT_SIZE_TICK_LABELS)
+ax2.set_ylim(.005, 20)
 
-# Make the plot square by adjusting the aspect ratio
-ax2.set_box_aspect(0.8)
+# Make the plot wider
+ax2.set_box_aspect(FIGURE_ASPECT_RATIO)
 
 plt.tight_layout()
 plt.show()
+# %%
+from optomization import W1,ZIW
+
+phcW1opt = W1(vars=np.array(outW1[-1]['result']['x']))
+phcZIWopt = ZIW(vars=np.array(outZIW[-1]['result']['x']))
+phcW1OG = W1(NyChange=0)
+phcZIWOG = ZIW(NyChange=0)
+
+shapesW1 = phcW1OG.layers[0].shapes
+shapesZIW = phcZIWOG.layers[0].shapes
+shapesW1Opt = phcW1opt.layers[0].shapes
+shapesZIWOpt = phcZIWopt.layers[0].shapes
+# %%
+# Create a figure for plotting the W1 structure with flipped axes and grey background
+fig, ax = plt.subplots(figsize=(10, 6))
+fig.patch.set_facecolor('white')  # Set figure background to white
+
+# Create a grey background using imshow with uniform values
+# Value 0.75 gives a medium grey (can be adjusted between 0-1)
+grey_level = 0.75  # Adjust this value between 0 (black) and 1 (white) for different grey shades
+ax.imshow(np.ones((100, 100)) * grey_level, cmap='gray', 
+          extent=[-5, 5, -0.5, 2.5], alpha=1.0, aspect='auto', zorder=0,vmin=0,vmax=1)
+
+# Define the zigzag boundaries for the darker region
+x_left = -2.75
+x_right = 2.75
+# Create a darker grey polygon that follows the zigzag pattern
+vertices = []
+# Add points for left zigzag boundary (bottom to top)
+for i in range(-1, 5):
+    vertices.append((x_left, i))
+    vertices.append((x_left-0.5, i+0.5))
+# Add top-right corner
+vertices.append((x_right+0.5, 4.5))
+# Add points for right zigzag boundary (top to bottom)
+for i in range(4, -2, -1):
+    vertices.append((x_right+0.5, i+0.5))
+    vertices.append((x_right, i))
+# Close the polygon
+vertices.append(vertices[0])
+
+# Create polygon for darker region
+darker_poly = plt.Polygon(vertices, closed=True, facecolor='grey', alpha=0.5, zorder=0.5)
+ax.add_patch(darker_poly)
+
+# Plot the circles from the original W1 structure as white holes
+for c in shapesW1:
+    # Create a circle with flipped x,y coordinates (y as horizontal axis, x as vertical axis)
+    circle = plt.Circle((c.y_cent, c.x_cent), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
+    ax.add_patch(circle)
+    
+    # Repeat circles in negative x direction (now vertical direction after flip)
+    circle = plt.Circle((c.y_cent, c.x_cent - 1), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
+    ax.add_patch(circle)
+    
+    # Repeat circles in positive direction to show additional 3 unit copies
+    for i in range(1, 3):
+        circle = plt.Circle((c.y_cent, c.x_cent + i), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
+        ax.add_patch(circle)
+    
+# Plot the circles from the optimized W1 structure as red dashed circles
+for c in shapesW1Opt:
+    # Create a circle with flipped x,y coordinates
+    circle = plt.Circle((c.y_cent, c.x_cent), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
+    ax.add_patch(circle)
+    
+    # Repeat circles in negative x direction
+    circle = plt.Circle((c.y_cent, c.x_cent - 1), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
+    ax.add_patch(circle)
+    
+    # Repeat circles in positive direction to show additional 3 unit copies
+    for i in range(1, 3):
+        circle = plt.Circle((c.y_cent, c.x_cent + i), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
+        ax.add_patch(circle)
+
+# Add dashed white lines for Voronoi cell walls between 3rd and 4th circles
+# Left side (negative x)
+# Draw zigzag lines along the hexagon edges on the left side
+x_left = -2.75
+for i in range(-1, 5):
+    # Draw segments of the zigzag pattern - each segment is 1/2 of hexagon height
+    ax.plot([x_left, x_left-0.5], [i, i+0.5], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
+    ax.plot([x_left-0.5, x_left], [i+0.5, i+1], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
+
+# Draw zigzag lines along the hexagon edges on the right side
+x_right = 2.75
+for i in range(-1, 5):
+    # Draw segments of the zigzag pattern - each segment is 1/2 of hexagon height
+    ax.plot([x_right, x_right+0.5], [i, i+0.5], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
+    ax.plot([x_right+0.5, x_right], [i+0.5, i+1], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
+
+# Set axis limits to show 5 holes on either side of center (expanded y range)
+ax.set_xlim(-5*np.sqrt(3)/2, 5*np.sqrt(3)/2)  # More of the y-axis (now horizontal)
+ax.set_ylim(-0.5, 2.5)  # From x=-0.5 to x=3.5 after adding 3 more unit cells
+ax.set_aspect('equal')
+ax.grid(False)
+ax.axis('off')  # No labels or axis lines as requested
+
+# Remove all padding
+plt.tight_layout(pad=0)
+plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+
+
+# Add a small xy axis indicator in the lower left
+# First create a white background for the axis without border
+rect = plt.Rectangle((-4, -0.4), 1.25, 1.0, facecolor='white', edgecolor='none', alpha=0.8, zorder=5)
+ax.add_patch(rect)
+
+# Create a small axis indicator showing flipped coordinates
+arrow_length = 0.5
+arrow_start_x, arrow_start_y = -3.75, -0.2
+
+# Draw y-axis (horizontal, since coordinates are flipped)
+ax.arrow(arrow_start_x, arrow_start_y, arrow_length, 0, 
+         head_width=0.12, head_length=0.12, fc='black', ec='black', linewidth=2.5, zorder=6)
+ax.text(arrow_start_x + arrow_length + 0.05, arrow_start_y + 0.25, 'y', fontsize=26, fontweight='bold', zorder=6)
+
+# Draw x-axis (vertical, since coordinates are flipped)
+ax.arrow(arrow_start_x, arrow_start_y, 0, arrow_length, 
+         head_width=0.12, head_length=0.12, fc='black', ec='black', linewidth=2.5, zorder=6)
+ax.text(arrow_start_x + 0.25, arrow_start_y + arrow_length + 0.08, 'x', fontsize=26, fontweight='bold', zorder=6)
+
+
+plt.show()
+
+# %%
+# Create a figure for plotting the ZIW structure with flipped axes and grey background
+fig, ax = plt.subplots(figsize=(10, 6))
+fig.patch.set_facecolor('white')  # Set figure background to white
+
+# Add horizontal offset parameter to shift all circles left or right
+x_offset = -np.sqrt(3)/2/6  # Change this value to shift circles horizontally (negative = left, positive = right)
+
+# Define region boundaries for different shadings
+x_left = -3.25*np.sqrt(3)/2 - x_offset
+x_right = 3.25*np.sqrt(3)/2 + x_offset
+
+# Create a grey background using imshow with uniform values
+# Value 0.75 gives a medium grey (can be adjusted between 0-1)
+grey_level = 0.75  # Adjust this value between 0 (black) and 1 (white) for different grey shades
+ax.imshow(np.ones((100, 100)) * grey_level, cmap='gray', 
+          extent=[-5 + x_offset, 5 + x_offset, -0.5, 2.5], alpha=1.0, aspect='auto', zorder=0,vmin=0,vmax=1)
+
+# Add a darker grey region between the dashed white lines
+darker_grey_level = 0.65  # Darker than the background grey (0.75)
+ax.imshow(np.ones((100, 100)) * darker_grey_level, cmap='gray',
+          extent=[x_left, x_right, -0.5, 2.5], alpha=1.0, aspect='auto', zorder=0.5, vmin=0, vmax=1)
+
+# Plot the circles from the original ZIW structure as white holes
+for c in shapesZIW:
+    # Create a circle with flipped x,y coordinates (y as horizontal axis, x as vertical axis)
+    # Apply the x_offset to the y coordinate (since axes are flipped)
+    circle = plt.Circle((c.y_cent + x_offset, c.x_cent), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
+    ax.add_patch(circle)
+    
+    # Repeat circles in negative x direction (now vertical direction after flip)
+    circle = plt.Circle((c.y_cent + x_offset, c.x_cent - 1), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
+    ax.add_patch(circle)
+    
+    # Repeat circles in positive direction to show additional 3 unit copies
+    for i in range(1, 3):
+        circle = plt.Circle((c.y_cent + x_offset, c.x_cent + i), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
+        ax.add_patch(circle)
+    
+# Plot the circles from the optimized ZIW structure as red dashed circles
+for c in shapesZIWOpt:
+    # Create a circle with flipped x,y coordinates
+    circle = plt.Circle((c.y_cent + x_offset, c.x_cent), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
+    ax.add_patch(circle)
+    
+    # Repeat circles in negative x direction
+    circle = plt.Circle((c.y_cent + x_offset, c.x_cent - 1), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
+    ax.add_patch(circle)
+    
+    # Repeat circles in positive direction to show additional 3 unit copies
+    for i in range(1, 3):
+        circle = plt.Circle((c.y_cent + x_offset, c.x_cent + i), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
+        ax.add_patch(circle)
+
+# Add dashed white vertical lines for Voronoi cell walls between 3rd and 4th circles
+# Left side (negative x)
+ax.plot([x_left, x_left], [-1, 5], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
+
+# Right side (positive x)
+ax.plot([x_right, x_right], [-1, 5], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
+
+# Set axis limits to show 5 holes on either side of center (expanded y range)
+ax.set_xlim(-5*np.sqrt(3)/2, 5*np.sqrt(3)/2)  # More of the y-axis (now horizontal)
+ax.set_ylim(-0.5, 2.5)  # From x=-0.5 to x=3.5 after adding 3 more unit cells
+ax.set_aspect('equal')
+ax.grid(False)
+ax.axis('off')  # No labels or axis lines as requested
+
+# Remove all padding
+plt.tight_layout(pad=0)
+plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+# Add a small xy axis indicator in the lower left
+# First create a white background for the axis without border
+rect = plt.Rectangle((-4 + x_offset, -0.4), 1.25, 1.0, facecolor='white', edgecolor='none', alpha=0.8, zorder=5)
+ax.add_patch(rect)
+
+# Create a small axis indicator showing flipped coordinates
+arrow_length = 0.5
+arrow_start_x, arrow_start_y = -3.75 + x_offset, -0.2
+
+# Draw y-axis (horizontal, since coordinates are flipped)
+ax.arrow(arrow_start_x, arrow_start_y, arrow_length, 0, 
+         head_width=0.12, head_length=0.12, fc='black', ec='black', linewidth=2.5, zorder=6)
+ax.text(arrow_start_x + arrow_length + 0.05, arrow_start_y + 0.25, 'y', fontsize=26, fontweight='bold', zorder=6)
+
+# Draw x-axis (vertical, since coordinates are flipped)
+ax.arrow(arrow_start_x, arrow_start_y, 0, arrow_length, 
+         head_width=0.12, head_length=0.12, fc='black', ec='black', linewidth=2.5, zorder=6)
+ax.text(arrow_start_x + 0.25, arrow_start_y + arrow_length + 0.08, 'x', fontsize=26, fontweight='bold', zorder=6)
+
+plt.show()
+# %%
+with open('/Users/dominic/Desktop/optGME/tests/media/ginds3/ziwBest.json','r') as file:
+    outZIW = json.load(file)
+#%%
+varsMin = np.array(outZIW[6]['x_values'])
+varsMax = np.array(outZIW[7]['x_values'])
+# %%
+from optomization.crystals import ZIW
+ZIWMin = ZIW(vars=varsMin)
+ZIWMax = ZIW(vars=varsMax)
+# %%
+kmin,kmax = .5*np.pi,np.pi
+nk=25
+params = outZIW[-1]
+gmeParams = params['gmeParams'].copy()
+gmeParams['kpoints']=np.vstack((np.linspace(kmin,kmax,nk),np.zeros(nk)))
+gmeParams['verbose']=True
+gmeParams['numeig']+=25
+gmeZIWMin = legume.GuidedModeExp(ZIWMin,gmax=params['gmax'])
+gmeZIWMin.run(**gmeParams)
+# %%
+gmeZIWMax = legume.GuidedModeExp(ZIWMax,gmax=params['gmax'])
+gmeZIWMax.run(**gmeParams)
+# %%
+
+# %%
+plt.plot(gmeZIWMin.freqs)
+plt.show()
+plt.plot(gmeZIWMax.freqs)
+plt.show()
+# %%
+legume.viz.eps_xy()
 # %%

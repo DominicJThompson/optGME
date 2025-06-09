@@ -623,23 +623,18 @@ for ax in [ax1, ax2]:
 ax1.text(0,0.6,'W1',fontsize=24,color=ax1.get_facecolor(),ha='center')
 ax2.text(0,0.6,'ZIW',fontsize=24,color=ax2.get_facecolor(),ha='center')
 
-# Add dashed grey circles highlighting holes
-# W1 waveguide highlight
-#c = plt.Circle((-np.sqrt(3)/2, -.5), 0.3,
-#              facecolor='none', edgecolor='#404040', linewidth=2, linestyle='--')
-#ax1.add_patch(c)
+# Add radius indicator line for W1
+# Find a representative circle in W1
+r_w1 = 0.3
+ax1.plot([-np.sqrt(3)/2, -np.sqrt(3)/2], [-.5,-.5+r_w1], 'k-', linewidth=2)
 ax1.text(-np.sqrt(3)/2, -0.8, '$r$', fontsize=22, ha='center',color='k')
 
-
-
-# ZIW waveguide highlights
-#c1 = plt.Circle((-np.sqrt(3)/6, 0), 0.105, 
-#               facecolor='none', edgecolor='#404040', linewidth=2, linestyle='--')
-#c2 = plt.Circle((-np.sqrt(3)/3, -.5), 0.235,
-#               facecolor='none', edgecolor='#404040', linewidth=2, linestyle='--')
-#ax2.add_patch(c1)
-#ax2.add_patch(c2)
-ax2.text(-np.sqrt(3)/6+.2, -.8, '$r_0$', fontsize=22, ha='center',color='k')
+# Add radius indicator lines for ZIW
+r0_ziw = 0.105
+r1_ziw = 0.235
+ax2.plot([-np.sqrt(3)/6, -np.sqrt(3)/6], [0, 0-r0_ziw], 'k-', linewidth=2)
+ax2.plot([-np.sqrt(3)/3, -np.sqrt(3)/3], [-0.5, -0.5+r1_ziw], 'k-', linewidth=2)
+ax2.text(-np.sqrt(3)/6+.2, -.4, '$r_0$', fontsize=22, ha='center',color='k')
 ax2.text(-np.sqrt(3)/3, -0.8, '$r_1$', fontsize=22, ha='center',color='k')
 
 # Add dashed rhombus on ZIW waveguide
