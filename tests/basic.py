@@ -75,9 +75,8 @@ def worker_function(input):
         pass
 
     cost = optomization.Backscatter()
-    ks = npa.linspace(npa.pi*.5,npa.pi,25)
 
-    gmeParams = {'verbose':False,'numeig':21,'compute_im':False,'kpoints':npa.array([[float(ks[8])],[0]])}
+    gmeParams = {'verbose':False,'numeig':21,'compute_im':False,'gmode_inds':[0,2,4],'kpoints':np.vstack([input['ks_interest'],[0]])}
     vars = W1Vars(key=input['key'])
     
     #define constraints
@@ -86,22 +85,46 @@ def worker_function(input):
                                             crystal=W1,
                                             phcParams={},
                                             gmeParams=gmeParams,
-                                            gmax=2.01,
-                                            mode=20)
+                                            gmax=2.5,
+                                            mode=20,
+                                            gmode_inds=[0,2,4],
+                                            keep_feasible=input['feasible'])
     
     manager.add_inside_unit_cell('Inside',.15)
-    manager.add_rad_bound('minimumRadius',.15,.4)
-    manager.add_min_dist('minDist',40/266,3,W1Vars(NyChange=3+3))
-    manager.add_gme_constrs_complex('gme_constrs',minFreq=.26,maxFreq=.28,ksBefore=[float(ks[6])],ksAfter=[float(ks[14]),float(ks[20])],bandwidth=.005,slope='down')
-    
+    manager.add_rad_bound('minimumRadius',.22,.4)
+    manager.add_min_dist('minDist',40/266,3)
+    manager.add_gme_constrs_complex('gme_constrs',minFreqHard=input['minfreqHard'],minFreqSoft=input['minfreqSoft'],maxFreq=.28,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
+                                    bandwidth=.001,slope='down',minNG=input['ngs_target']*.9,maxNG=input['ngs_target']*1.1,path=input['pathc'])
+
+
     #run minimization
-    tcParams = {'xtol':1e-4,'initial_tr_radius':.1}
-    minim = optomization.TrustConstr(vars,W1,cost,mode=20,maxiter=400,gmeParams=gmeParams,constraints=manager,path=input['path'],**tcParams)
+    tcParams = input['tcParams']
+    minim = optomization.TrustConstr(vars,W1,cost,mode=20,maxiter=800,gmeParams=gmeParams,constraints=manager,path=input['path'],**tcParams)
     minim.minimize()
     minim.save(input['path'])
 #%%
 if __name__=='__main__':
-    for i in range(300):
-        input = {'path':f"tests/media/nonlinopt{i}.json",'key':i}
-        minim = worker_function(input)  # Compute the result
+    ks = list(np.linspace(npa.pi*.5,npa.pi,100))
+    for i in range(len(ks)):
+        ks[i] = float(ks[i])
+
+    ks_interest = [ks[31],ks[45],ks[51],ks[55]]
+    ngs_target = [5,10,15,20]
+    ks_before = [[ks[15],ks[25]],[ks[15],ks[35]],[ks[15],ks[41]],[ks[15],ks[45]]]
+    ks_after = [[ks[45],ks[95]],[ks[60],ks[90]],[ks[65],ks[90]],[ks[65],ks[90]]]
+    minfreqHard = [.253,.253,.253,.253]
+    minfreqSoft = [.26,.26,.26,.26]
+
+    path = f"media/constr/data/W1Opt_ng10.json"
+    pathc = f"media/constr/constr/W1Opt_ng10.json"
+    input = {'path':path,'pathc':pathc,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
+            'key':2,'ks_interest':ks_interest[1],'ngs_target':ngs_target[1],'ks_before':ks_before[1],'ks_after':ks_after[1],'feasible':False,'minfreqHard':minfreqHard[1],'minfreqSoft':minfreqSoft[1]}
+    minim = worker_function(input)  # Compute the result
+
+    path = f"media/constr/data/W1Opt_ng15.json"
+    pathc = f"media/constr/constr/W1Opt_ng15.json"
+    input = {'path':path,'pathc':pathc,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
+            'key':1,'ks_interest':ks_interest[2],'ngs_target':ngs_target[2],'ks_before':ks_before[2],'ks_after':ks_after[2],'feasible':False,'minfreqHard':minfreqHard[2],'minfreqSoft':minfreqSoft[2]}
+    minim = worker_function(input)  # Compute the result
+
 # %%

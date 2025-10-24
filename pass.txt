@@ -1,0 +1,236 @@
+
+def plotBands(gme,gmemid,gmefinal,ng,params,color='red',plotback=True,index=0,index2=1):
+    blue = '#0077BB'
+    orange = '#EE7733'
+    green = '#66CC99'
+    dark_blue = '#004488'
+    dark_orange = '#CC6622'
+
+    # Font size parameters
+    TITLE_FONT_SIZE = 34
+    LABEL_FONT_SIZE = 34
+    ANNOTATION_FONT_SIZE = 40
+    TICK_FONT_SIZE = 28
+    
+    #missilanius variables needed
+    conFac = 1e-12*299792458/params['cost']['a']/1e-9
+    if index==0 or index==1:
+        freqmin, freqmax = .245, .282
+    elif index==2 or index==3:
+        freqmin, freqmax = .238, .282
+    mode = params['mode']
+    kindex = np.abs(gme.kpoints[0,:] - params['gmeParams']['kpoints'][0][0]).argmin()
+    print('kindex ',kindex)
+    print('ng ',ng[kindex])
+    # Generate some sample data
+    ks = np.linspace(0.25, 0.5, nk)
+
+    # Create figure and define gridspec layout
+    fig = plt.figure(figsize=(6.4, 5.8),dpi=400)
+
+    # Main subplot (dispersion curve)
+    ax2 = plt.gca()
+    ax2.set_xlabel(r"Wavevector $\tilde k$",fontsize=LABEL_FONT_SIZE)
+    ax2.set_ylabel(r"Frequency $\omega a / 2\pi c$",fontsize=LABEL_FONT_SIZE)
+    ax2.set_xlim(0.25, 0.5)
+    ax2.set_ylim(freqmin,freqmax)
+    ax2.tick_params(axis='both', which='major', labelsize=TICK_FONT_SIZE)
+
+    #plot frequency plot 
+    ax2.fill_between(ks,ks,np.max(ks),color='darkGray',alpha=1) #light line
+    ax2.fill_between(ks,gmefinal.freqs[:,mode-1],np.zeros_like(ks),color=dark_orange,alpha=.7) #continums
+    ax2.fill_between(ks,gme.freqs[:,mode-1],np.zeros_like(ks),color=dark_blue,alpha=.7) #continums\
+    ax2.plot(ks,gme.freqs[:,mode],color=blue,linewidth=3,zorder=2) #band of interest
+    if plotback:
+        ax2.plot(ks,gme.freqs[:,mode+1],color=blue,linewidth=3,linestyle='--') #other band
+    else:
+        ax2.plot(ks[50:],gme.freqs[50:,mode+1],color=blue,linewidth=3,linestyle='--') #other band
+    ax2.plot(ks,gmemid.freqs[:,mode],color=green,linewidth=3,zorder=2) #band of interest
+    ax2.plot(ks,gmefinal.freqs[:,mode],color=orange,linewidth=3,zorder=2) #band of interest
+    if plotback:
+        ax2.plot(ks,gmefinal.freqs[:,mode+1],color=orange,linewidth=3,linestyle='--') #other band
+    else:
+        ax2.plot(ks[50:],gmefinal.freqs[50:,mode+1],color=orange,linewidth=3,linestyle='--') #other band
+
+    se = [24,113,15,149,39,84,13,89]
+    ax2.scatter([ks[se[2*index]],ks[se[2*index+1]]],[gme.freqs[se[2*index],mode],gme.freqs[se[2*index+1],mode]],s=150,color=blue,zorder=3,edgecolor='black', linewidth=1.5)
+    ax2.scatter([ks[se[2*index2]],ks[se[2*index2+1]]],[gmefinal.freqs[se[2*index2],mode],gmefinal.freqs[se[2*index2+1],mode]],s=150,color=orange,zorder=3,edgecolor='black', linewidth=1.5)
+
+    # Add text labels with slight offset for better visibility
+    if index==0:a,b = r'$\mathbf{a}^\prime$',r'$\mathbf{b}^\prime$'
+    elif index==1:a,b = r'$\mathbf{a}$',r'$\mathbf{b}$'
+    elif index==2:a,b = r'$\mathbf{c}^\prime$',r'$\mathbf{d}^\prime$'
+    elif index==3:a,b = r'$\mathbf{c}$',r'$\mathbf{d}$'
+    if index>=2:
+        xytext1 = (5, -25)
+        xytext2 = (15, -5)
+    else:
+        xytext1 = (5, 5)
+        xytext2 = (-25, 10)
+    ax2.annotate(a, 
+                 (ks[se[2*index]], gme.freqs[se[2*index], mode]),
+                 xytext=xytext1,
+                 textcoords='offset points',
+                 color=blue,
+                 fontsize=ANNOTATION_FONT_SIZE) 
+    ax2.annotate(b, 
+                 (ks[se[2*index+1]], gme.freqs[se[2*index+1], mode]),
+                 xytext=xytext2,
+                 textcoords='offset points',
+                 color=blue,
+                 fontsize=ANNOTATION_FONT_SIZE)
+    
+    # Add vertical red dashed line at specified value
+    ax2.axvline(x=0.33333, color='#DC143C', linestyle='--', alpha=0.8, linewidth=3)
+
+    # Add text labels with slight offset for better visibility
+    if index2==0:a,b = r'$\mathbf{a}^\prime$',r'$\mathbf{b}^\prime$'
+    elif index2==1:a,b = r'$\mathbf{a}$',r'$\mathbf{b}$'
+    elif index2==2:a,b = r'$\mathbf{c}^\prime$',r'$\mathbf{d}^\prime$'
+    elif index2==3:a,b = r'$\mathbf{c}$',r'$\mathbf{d}$'
+    if index2>=2:
+        xytext1 = (-8, 12)
+        xytext2 = (5, 15)
+    else:
+        xytext1 = (-25, -40)
+        xytext2 = (-15, -40)
+    ax2.annotate(a, 
+                 (ks[se[2*index2]], gmefinal.freqs[se[2*index2], mode]),
+                 xytext=xytext1,
+                 textcoords='offset points',
+                 color=orange,
+                 fontsize=ANNOTATION_FONT_SIZE) 
+    ax2.annotate(b, 
+                 (ks[se[2*index2+1]], gmefinal.freqs[se[2*index2+1], mode]),
+                 xytext=xytext2,
+                 textcoords='offset points',
+                 color=orange,
+                 fontsize=ANNOTATION_FONT_SIZE)
+
+    # Add inset title for ZIW with white backing
+    ax2.text(0.95, 0.95, 'W1', transform=ax2.transAxes, fontsize=TITLE_FONT_SIZE, 
+             bbox=dict(boxstyle="round,pad=0.25", facecolor='white', alpha=0.7, edgecolor='none'),
+             verticalalignment='top',horizontalalignment='right')
+
+    
+    plt.show()
+
+plotBands(gmeZIWOG,gmeZIWmid,gmeZIW,ngZIW,out[-1],color='#EE7733',plotback=False,index=3,index2=2)
+plotBands(gmeW1OG,gmeW1mid,gmeW1,ngW1,out[-1],color='#0077BB',plotback=True,index=1,index2=0)
+# %%
+
+def filedPlots(phc,phcMid,phcOG,gme,gmeMid,gmeOG,params):
+    # Font size variables for consistent styling
+    TITLE_SIZE = 28
+    LABEL_SIZE = 26
+    TICK_SIZE = 20
+    LEGEND_SIZE = 24
+    COLORBAR_LABEL_SIZE = 32
+    COLORBAR_TICK_SIZE = 28
+    
+    # Set up variables
+    ylim = 8*np.sqrt(3)/2
+    ys = np.linspace(-ylim/2, ylim/2, 300)
+    mode = params['mode']
+    kindex = np.abs(gme.kpoints[0,:] - params['gmeParams']['kpoints'][0][0]).argmin()
+    # kindex = 190
+    z = phc.layers[0].d/2
+
+    # Get field of original crystal
+    fieldsOG, _, _ = gmeOG.get_field_xy('E', kindex, mode, z, ygrid=ys, component='xyz')
+    eabsOG = np.sqrt(np.abs(np.conj(fieldsOG['x'])*fieldsOG['x'] + np.conj(fieldsOG['y'])*fieldsOG['y'] + np.conj(fieldsOG['z'])*fieldsOG['z']))
+    fields, _, _ = gme.get_field_xy('E', kindex, mode, z, ygrid=ys, component='xyz')
+    eabs = np.sqrt(np.abs(np.conj(fields['x'])*fields['x'] + np.conj(fields['y'])*fields['y'] + np.conj(fields['z'])*fields['z']))
+    fieldsMid, _, _ = gmeMid.get_field_xy('E', kindex, mode, z, ygrid=ys, component='xyz')
+    eabsMid = np.sqrt(np.abs(np.conj(fieldsMid['x'])*fieldsMid['x'] + np.conj(fieldsMid['y'])*fieldsMid['y'] + np.conj(fieldsMid['z'])*fieldsMid['z']))
+    maxF = np.max([np.max(eabsOG), np.max(eabs), np.max(eabsMid)])
+    
+    # Optional parameters to control the field view|
+    x_offset = 0  # Adjust to shift the center of the view left or right
+    x_crop = 0    # Adjust to crop from the right side (0 for no cropping)
+    
+    # Calculate the actual x limits based on the parameters
+    x_min = -ylim/2 + x_offset
+    x_max = ylim/2 + x_offset - x_crop
+    
+    # Create a figure with three subplots side by side
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(3, 4.8),dpi=400)
+    
+    # Plot optimized field on left subplot (vertical orientation)
+    cax1 = ax1.imshow(eabs, extent=[-.5, .5, -ylim/2, ylim/2], cmap='plasma', vmax=maxF, vmin=0, zorder=1)
+    circles1 = [Circle((s.x_cent, s.y_cent), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phc.layers[0].shapes]
+    cirlcesArround1 = [Circle((0, 0), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phc.layers[0].shapes]
+    for c, ca in zip(circles1, cirlcesArround1):
+        ax1.add_patch(c)
+        ca.center = (c.center[0]-np.sign(c.center[0]), c.center[1])
+        ax1.add_patch(ca)
+    ax1.set_xlim(-.5, .5)
+    ax1.set_ylim(x_min, x_max)
+    ax1.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False, 
+                   labelbottom=False, labelleft=False)
+    
+    # Plot mid field on center subplot (vertical orientation)
+    cax2 = ax2.imshow(eabsMid, extent=[-.5, .5, -ylim/2, ylim/2], cmap='plasma', vmax=maxF, vmin=0, zorder=1)
+    circles2 = [Circle((s.x_cent, s.y_cent), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phcMid.layers[0].shapes]
+    cirlcesArround2 = [Circle((0, 0), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phcMid.layers[0].shapes]
+    for c, ca in zip(circles2, cirlcesArround2):
+        ax2.add_patch(c)
+        ca.center = (c.center[0]-np.sign(c.center[0]), c.center[1])
+        ax2.add_patch(ca)
+    ax2.set_xlim(-.5, .5)
+    ax2.set_ylim(x_min, x_max)
+    ax2.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False, 
+                   labelbottom=False, labelleft=False)
+    
+    # Plot original field on right subplot (vertical orientation)
+    cax3 = ax3.imshow(eabsOG, extent=[-.5, .5, -ylim/2, ylim/2], cmap='plasma', vmax=maxF, vmin=0, zorder=1)
+    circles3 = [Circle((s.x_cent, s.y_cent), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phcOG.layers[0].shapes]
+    cirlcesArround3 = [Circle((0, 0), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phcOG.layers[0].shapes]
+    for c, ca in zip(circles3, cirlcesArround3):
+        ax3.add_patch(c)
+        ca.center = (c.center[0]-np.sign(c.center[0]), c.center[1])
+        ax3.add_patch(ca)
+    ax3.set_xlim(-.5, .5)
+    ax3.set_ylim(x_min, x_max)
+    ax3.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False, 
+                   labelbottom=False, labelleft=False)
+    
+    # Hyperparameters to control box positioning and appearance
+    box_margin = 0.02      # Margin between subplot and box edge
+    box_linewidth = 3      # Line width of the boxes
+    box_colors = ['#0077BB', '#33BB66', '#EE7733']  # Colors for each subplot box
+    
+    # Calculate box positions based on subplot layout
+    subplot_width = 0.2   # Width of each subplot (adjust if needed)
+    subplot_spacing = 0.0725 # Spacing between subplots
+    box_height = 0.77       # Height of boxes
+    box_y_offset = 0.11    # Vertical offset from bottom
+    
+    # Calculate x positions for each box
+    box_x_positions = [
+        0.14,                                    # Left subplot
+        0.14 + subplot_width + subplot_spacing,  # Center subplot  
+        0.14 + 2*(subplot_width + subplot_spacing)  # Right subplot
+    ]
+    
+    # Add boxes around each subplot using calculated coordinates
+    for i, (x_pos, color) in enumerate(zip(box_x_positions, box_colors)):
+        fig.add_artist(plt.Rectangle((x_pos - box_margin, box_y_offset - box_margin), 
+                                   subplot_width + 2*box_margin, box_height + 2*box_margin,
+                                   facecolor='none', edgecolor=color, 
+                                   linewidth=box_linewidth, zorder=10))
+    
+    # Add a horizontal colorbar at the bottom
+    cbar_ax = fig.add_axes([0.115, 0.05, 0.8, 0.03])  # Position for horizontal colorbar at bottom
+    cbar = fig.colorbar(cax1, cax=cbar_ax, orientation='horizontal')
+    cbar.set_label(r"$|\mathbf{e}_{\tilde k=0.33}|$ [a$^{-\frac{3}{2}}$]", fontsize=COLORBAR_LABEL_SIZE)
+    cbar.ax.tick_params(labelsize=COLORBAR_TICK_SIZE)
+    # Set specific tick locations - you can modify these values
+    cbar.set_ticks([0, .25, .5])
+    # Format the tick labels to show 0 instead of 0.0 while keeping other decimals
+    cbar.ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: '0' if x == 0 else f'{x:.2f}'))
+
+    plt.show()
+
+filedPlots(phcZIWOG,phcZIWmid,phcZIW,gmeZIWOG,gmeZIWmid,gmeZIW,out[-1])
+#filedPlots(phcW1OG,phcW1mid,phcW1,gmeW1OG,gmeW1mid,gmeW1,out[-1])

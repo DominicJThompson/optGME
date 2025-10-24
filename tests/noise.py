@@ -13,90 +13,107 @@ from optomization.crystals import W1
 from optomization.cost import Backscatter
 
 #%%
-# Load W1Best.json data for analysis
-with open('/Users/dominic/Desktop/optGME/tests/media/ginds3/W1Best.json', 'r') as file:
-    w1_data = json.load(file)
+# Initialize storage for all results
+# Initialize storage for all results
+all_results = {}
 
-# Get the original W1holes from the data
-W1holes_original = np.array(w1_data[-1]['result']['x'])
-costParams = w1_data[-1]['cost']
-gmeParams = w1_data[-1]['gmeParams']
-gmeParams['kpoints'] = np.array(gmeParams['kpoints'])
-# Create the PHC with the original hole parameters
-W1PHC = W1(vars=W1holes_original)
+# Base path for input files
+base_path = '/home/dominic/Desktop/optGME/optGME/tests/media/w1/sweepNG'
 
-# Run the GME simulation
-gme = legume.GuidedModeExp(W1PHC, 4.01)
-gme.run(**gmeParams)
+# Get all files in the directory
+files = [f for f in os.listdir(base_path) if f.endswith('.json')]
 
-# Calculate backscatter and group index for the original design
-backscatter = Backscatter(**costParams)
-bs_original = backscatter.cost(gme, W1PHC, 20)
-ng_original = np.abs(NG(gme, 0, 20))
+# Initialize storage for each file
+for file_name in files:
+    file_key = file_name.replace('.json', '')
+    all_results[file_key] = {
+        'bs_values': {str(i): [] for i in range(1, 6)},
+        'ng_values': {str(i): [] for i in range(1, 6)},
+        'freq_values': {str(i): [] for i in range(1, 6)},
+        'original': {}
+    }
 
-print(f"Original design: Backscatter = {bs_original}, NG = {ng_original}")
-
-#%%
-
-# Number of noise iterations to run
-num_iterations = 100
-bs_values = []
-ng_values = []
-
-# Loop over noise iterations
-for i in range(num_iterations):
-    print(f"Iteration {i+1}/{num_iterations}")
-    # Add Gaussian noise with mean 0 and std 1 to each value in W1holes
-    noise = np.random.normal(0, 1/266, size=W1holes_original.shape)
-    W1holes_noisy = W1holes_original + noise
+# Process each file
+for fileNum,file_name in enumerate(files):
+    print(f"\nProcessing {file_name}...")
+    file_key = file_name.replace('.json', '')
     
-    # Create the PHC with the noisy hole parameters
-    W1PHC = W1(vars=W1holes_noisy)
+    # Load data from current file
+    with open(f'{base_path}/{file_name}', 'r') as file:
+        data = json.load(file)
+
+    if data[-2]['constraint_violation']>0:
+        continue
+
+    try:
+        # Get parameters from the data
+        W1holes_original = np.array(data[-1]['result']['x'])
+        costParams = data[-1]['cost']
+        gmeParams = data[-1]['gmeParams']
+        gmeParams['kpoints'] = np.array(gmeParams['kpoints'])
+    except KeyError:
+        W1holes_original = np.array(data[-1]['x_values'])
     
-    # Run the GME simulation
+    # Create and run original PHC
+    W1PHC = W1(vars=W1holes_original)
     gme = legume.GuidedModeExp(W1PHC, 4.01)
     gme.run(**gmeParams)
     
-    # Calculate backscatter and group index
+    # Calculate original values
     backscatter = Backscatter(**costParams)
-    bs = backscatter.cost(gme, W1PHC, 20)
-    ng = np.abs(NG(gme, 0, 20))
+    bs_original = backscatter.cost(gme, W1PHC, 20)
+    ng_original = np.abs(NG(gme, 0, 20))
+    freq_original = gme.freqs[0][20]  # Get frequency at k=0, mode=20
     
-    # Store the results
-    bs_values.append(bs)
-    ng_values.append(ng)
+    # Store original values
+    all_results[file_key]['original'] = {
+        'bs': float(bs_original),
+        'ng': float(ng_original),
+        'freq': float(freq_original)
+    }
     
-    print(f"Iteration {i+1}/{num_iterations}: Backscatter = {bs}, NG = {ng}")
+    print(f"Original design for {file_key}: {fileNum}: Backscatter = {bs_original}, NG = {ng_original}, Freq = {freq_original}")
+    
+    # Run noise iterations for each noise level
+    num_iterations = 50
+    noise_levels = [i for i in range(1, 6)]
+    
+    for noise_level in noise_levels:
+        print(f"Processing noise level {noise_level}...")
+        for i in range(num_iterations):
+            
+            # Add Gaussian noise
+            noise = np.random.normal(0, noise_level/266, size=6)
+            W1holes_noisy = W1holes_original.copy()
+            W1holes_noisy[-6:] += noise
+            
+            # Create and run noisy PHC
+            W1PHC = W1(vars=W1holes_noisy)
+            gme = legume.GuidedModeExp(W1PHC, 4.01)
+            gme.run(**gmeParams)
+            
+            # Calculate values
+            backscatter = Backscatter(**costParams)
+            bs = backscatter.cost(gme, W1PHC, 20)
+            ng = np.abs(NG(gme, 0, 20))
+            freq = gme.freqs[0][20]  # Get frequency at k=0, mode=20
+            
+            # Store results
+            noise_key = str(noise_level)
+            all_results[file_key]['bs_values'][noise_key].append(float(bs))
+            all_results[file_key]['ng_values'][noise_key].append(float(ng))
+            all_results[file_key]['freq_values'][noise_key].append(float(freq))
+        
+        # Save results after each noise level is completed, overwriting previous data
+        output_path = '/home/dominic/Desktop/optGME/optGME/tests/media/w1/noise_analysis.json'
+        # Clear file and write new data
+        with open(output_path, 'w') as file:
+            # Truncate file to clear it
+            file.truncate(0)
+            # Write new data
+            json.dump(all_results, file, indent=4)
+        print(f"Saved results for noise level {noise_level}")
 
-# Convert results to numpy arrays
-bs_values = np.array(bs_values)
-ng_values = np.array(ng_values)
+print(f"\nAll results saved to {output_path}")
 
-# %%
-# Create histograms for backscatter and group index values
-import matplotlib.pyplot as plt
-
-# Create a figure for backscatter values
-plt.figure(figsize=(8, 6))
-plt.hist(bs_values, bins=10, alpha=0.7, color='skyblue', edgecolor='black')
-plt.title('Distribution of Backscatter Values', fontsize=14)
-plt.xlabel('Backscatter Value', fontsize=12)
-plt.ylabel('Frequency', fontsize=12)
-plt.axvline(x=bs_original, color='r', linestyle='--', label='Original Design')
-plt.grid(True, alpha=0.3)
-plt.legend()
-plt.tight_layout()
-plt.show()
-
-# Create a figure for group index values
-plt.figure(figsize=(8, 6))
-plt.hist(ng_values, bins=10, alpha=0.7, color='lightgreen', edgecolor='black')
-plt.title('Distribution of Group Index Values', fontsize=14)
-plt.xlabel('Group Index Value', fontsize=12)
-plt.ylabel('Frequency', fontsize=12)
-plt.axvline(x=ng_original, color='r', linestyle='--', label='Original Design')
-plt.grid(True, alpha=0.3)
-plt.legend()
-plt.tight_layout()
-plt.show()
 # %%

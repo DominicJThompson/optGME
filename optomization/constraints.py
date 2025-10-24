@@ -5,13 +5,17 @@ from autograd import grad,jacobian
 import legume.backend as bd
 from optomization.utils import NG
 
+#temporary library
+import os
+import json
+
 
 class ConstraintManager(object):
     """
     The class that defines constraints to be placed on the optomization.
     Each function of the class is a wrapper that defines another function
     """
-    def __init__(self,x0=[],numberHoles=0,**kwargs):
+    def __init__(self,x0=[],numberHoles=0,keep_feasible=False,**kwargs):
         """
         Initalize the relevent fields
 
@@ -40,6 +44,9 @@ class ConstraintManager(object):
                             'numberHoles':numberHoles,
                             **kwargs
                             }
+        
+        #set keep_feasible
+        self.keep_feasible = keep_feasible
 
     def remove_constraint(self, name):
         """
@@ -90,7 +97,7 @@ class ConstraintManager(object):
         return wrapped
     
     def build_bounds(self):
-        return(Bounds(self.lowerBounds,self.upperBounds))
+        return(Bounds(self.lowerBounds,self.upperBounds,keep_feasible=self.keep_feasible))
 
     #------------default constraints to add-------------
         
@@ -149,7 +156,7 @@ class ConstraintManager(object):
             'type': 'constraint'
         }
 
-    def add_gme_constrs_complex(self,name,minFreq=0,maxFreq=100,minNG=0,maxNG=100,ksBefore=[0],ksAfter=[np.pi],bandwidth=.01,slope='down'):
+    def add_gme_constrs_complex(self,name,minFreqHard=0,minFreqSoft=0,maxFreq=100,minNG=0,maxNG=100,ksBefore=[0],ksAfter=[np.pi],bandwidth=.01,slope='down',path="temp.json"):
         """
         implements the folowing constraints:
         freq_bound,
@@ -169,13 +176,14 @@ class ConstraintManager(object):
         """
 
 
-        self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._gme_constrs_complex,(ksBefore,ksAfter,bandwidth,slope)),
-                                                     np.array([minFreq,minNG,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]),
-                                                     np.array([maxFreq,maxNG,0,0,0,0,0,0]),
-                                                     jac=self._wrap_grad(jacobian(self._gme_constrs_complex),(ksBefore,ksAfter,bandwidth,slope)))
+        self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._gme_constrs_complex,(ksBefore,ksAfter,bandwidth,slope,path)),
+                                                     np.array([minFreqHard,minFreqSoft,minNG,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]),
+                                                     np.array([maxFreq,maxFreq,maxNG,0,0,0,0,0,0]),
+                                                     jac=self._wrap_grad(jacobian(self._gme_constrs_complex),(ksBefore,ksAfter,bandwidth,slope,path)),
+                                                     keep_feasible=[True,False,False,False,False,False,False,False,False])
         self.constraintsDisc[name] = {
             'discription': """implements the folowing constraints: freq_bound, ng_bound, monotonic_band, bandwidth, and ng sign constraints on either side """,
-            'args': {'minFreq': minFreq, 'maxFreq': maxFreq,'minNG': minNG, 'maxNG': maxNG,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
+            'args': {'minFreqHard': minFreqHard, 'minFreqSoft': minFreqSoft, 'maxFreq': maxFreq,'minNG': minNG, 'maxNG': maxNG,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
             'type': 'constraint'
         }
     
@@ -192,7 +200,7 @@ class ConstraintManager(object):
         return(cs)
 
     
-    def _gme_constrs_complex(self,x,ksBefore,ksAfter,bandwidth,slope):
+    def _gme_constrs_complex(self,x,ksBefore,ksAfter,bandwidth,slope,path):
 
         #start by setting up GME and running it for all points 
         phc = self.defaultArgs['crystal'](vars=x,**self.defaultArgs['phcParams'])
@@ -217,7 +225,7 @@ class ConstraintManager(object):
             raise ValueError("slope within ng bound must be either 'up' or 'down'")
 
         #get frequency bound constraint
-        freq = gme.freqs[0,self.defaultArgs['mode']]
+        freq = gme.freqs[len(ksBefore),self.defaultArgs['mode']]
 
         #get ng bound constraint
         ng = c*NG(gme,len(ksBefore),self.defaultArgs['mode'],Nx=100,Ny=125)
@@ -229,5 +237,23 @@ class ConstraintManager(object):
         above = bandwidth/2+freq-gme.freqs[-1,self.defaultArgs['mode']+1]
         below = bandwidth/2-freq+gme.freqs[1,self.defaultArgs['mode']-1]
 
+        # Append the frequency and ng values to the file as a list of dicts
+        data = []
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as f:
+                    data = json.load(f)
+                    if not isinstance(data, list):
+                        data = [data]
+            except (json.JSONDecodeError, FileNotFoundError):
+                data = []
+        try:
+            entry = {'freq': freq._value, 'ng': ng._value}
+        except AttributeError:
+            entry = {'freq': float(freq), 'ng': float(ng)}
+        data.append(entry)
+        with open(path, "w") as f:
+            json.dump(data, f, indent=4)
+
         #combine constraints and return
-        return(bd.hstack((freq,ng,monotonic,above,below)))
+        return(bd.hstack((freq,freq,ng,monotonic,above,below)))

@@ -40,6 +40,8 @@ class Minimize(object):
         self.phcParams = phcParams
         self.tol = tol
         self.result = None
+        self.time_iter = None #global time used for measuring time per iteration
+        self.eigvecs = None
         
 
     def __str__(self):
@@ -253,7 +255,26 @@ class TrustConstr(Minimize):
                     "barrier_parameter": getattr(result, "barrier_parameter", None),
                     "cg_iterations": getattr(result, "cg_niter", None),
                     "cg_stop_condition": getattr(result, "cg_stop_cond", None),
+                    "time": time.time()-self.time_iter,
+                    "mode": self.mode
                 }
+
+                self.time_iter = time.time()
+
+                # # #correct the mode 
+                # phc = self.crystal(vars=xk,**self.phcParams)
+                # gme = legume.GuidedModeExp(phc,self.gmax)
+                # gme.run(**self.gmeParams)
+
+                # #we are going to add a correction to the mode number to account for frequency shifts
+                # if self.eigvecs is not None:
+                #     overlap = []
+                #     min_length = np.min([self.eigvecs.shape[0],gme.eigvecs[0].shape[0]])
+                #     self.eigvecs = self.eigvecs[:min_length]
+                #     for i in range(gme.eigvecs[0].shape[1]):
+                #         overlap.append(np.abs(np.dot(self.eigvecs,gme.eigvecs[0][:min_length,i])))
+                #     self.mode = int(np.argmax(overlap))
+                # self.eigvecs = gme.eigvecs[0][:,self.mode]
 
                 # Append the new iteration to the JSON file
                 data.append(iteration_data)
@@ -262,6 +283,7 @@ class TrustConstr(Minimize):
 
         #run optomization
         t1 = time.time()
+        self.time_iter = time.time()
         result = minimize(fun=self.scipy_objective,    
                           x0=self.x0,            
                           jac=scipy_grad, 

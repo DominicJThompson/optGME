@@ -154,13 +154,29 @@ def runSims(xs,crystal,params):
     for i in range(nk):
         if i%10==0:
             print(i)
-        gmeParams['kpoints']=np.vstack(([np.linspace(kmin,kmax,nk)[i],np.linspace(kmin,kmax,nk)[i]+.001],[0,0]))
+        gmeParams['kpoints']=np.vstack(([np.linspace(kmin,kmax,nk)[i]],[0]))
         gmeParams['verbose']=False
         gmeAlphacalc = legume.GuidedModeExp(phc,gmax=params['gmax'])
         gmeAlphacalc.run(**gmeParams)
         alphas.append(10**cost.cost(gmeAlphacalc,phc,params['mode']))
-        ngs.append((1/2/np.pi)*np.abs(.001/(gmeAlphacalc.freqs[1,params['mode']]-gmeAlphacalc.freqs[0,params['mode']])))
+        ngs.append(np.abs(NG(gmeAlphacalc,0,params['mode'],Ny=400)))
     return(phc,gme,alphas,ngs)
+
+def runNoiseSweep(xs,crystal,params):
+    phc = crystal(xs)
+    gmeParams = params['gmeParams'].copy()
+    gmeParams['kpoints']=np.array(gmeParams['kpoints'])
+    gmeParams['verbose']=False
+    cost = Backscatter(**params['cost'])
+    gme = legume.GuidedModeExp(phc,gmax=params['gmax'])
+    gme.run(**gmeParams)
+    
+    lp_alphas = []
+    for lp in np.logspace(np.log10(10),np.log10(300),500):
+        cost.lp = lp
+        lp_alphas.append(10**cost.cost(gme,phc,params['mode']))
+
+    return(lp_alphas)
 #%%
 def plotBands(gme,ng,params,color='red',plotback=True,index=0):
 
@@ -331,17 +347,22 @@ def filedPlots(phc,phcOG,gme,gmeOG,params):
     eOG = np.abs(np.conj(fOG['x'])*fOG['x'] + np.conj(fOG['y'])*fOG['y'] + np.conj(fOG['z'])*fOG['z'])
     f, _, _ = gme.get_field_xy('E', kindex, mode, z,Ny = 100,Nx = 100, component='xyz')
     e = np.abs(np.conj(f['x'])*f['x'] + np.conj(f['y'])*f['y'] + np.conj(f['z'])*f['z'])
-    vOG = 1/np.max(eOG*epsOG)
-    v = 1/np.max(e*eps)
-    print(r"Mode volume $\lambda^3$: (OG,Opt) ",vOG*(gmeOG.freqs[kindex,mode]*2*np.pi)**3, v*(gme.freqs[kindex,mode]*2*np.pi)**3)
-    print(r"Mode volume $\mu m^3$: (OG,Opt) ",vOG/.266**3, v/.266**3)
+    conversionFactor = (266E-9)*(266E-9*z)*(266E-9*phc.lattice.a2[1])
+    vOG = (1/np.max(eOG*epsOG))*conversionFactor
+    v = (1/np.max(e*eps))*conversionFactor
+    print(r"Mode volume $(\lambda/n)^3$: (OG,Opt) ",
+          vOG/(266E-9/gmeOG.freqs[kindex,mode]/np.sqrt(phcOG.layers[0].eps_b))**3, 
+          v/(266E-9/gme.freqs[kindex,mode]/np.sqrt(phc.layers[0].eps_b))**3)
+    print(r"Mode volume $\mu m^3$: (OG,Opt) ",vOG/(1E-6)**3, v/(1E-6)**3)
 
     #calculate the maximum percell enhancement
     ng_OG = np.abs(NG(gmeOG,kindex,mode))
     ng_ = np.abs(NG(gme,kindex,mode))
-    cPF = 3*np.pi*(3E8)**2*266E-9/(12**(3/2))
+    cPF = 3*np.pi*(299792458)**2*266E-9/(phc.layers[0].eps_b**(3/2))
     conFac = 2*np.pi*299792458/params['cost']['a']/1e-9
-    print(r"Maximum percell enhancement: (OG,Opt) ",cPF*ng_OG/(vOG*(266E-9)**3)/(gmeOG.freqs[kindex,mode]*conFac)**2,cPF*ng_/(v*(266E-9)**3)/(gme.freqs[kindex,mode]*conFac)**2)
+    print(r"Maximum percell enhancement: (OG,Opt) ",
+          cPF*ng_OG/(vOG)/(gmeOG.freqs[kindex,mode]*conFac)**2,
+          cPF*ng_/(v)/(gme.freqs[kindex,mode]*conFac)**2)
     # Create a figure with two subplots stacked vertically
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5, 3))
     
@@ -393,19 +414,20 @@ def filedPlots(phc,phcOG,gme,gmeOG,params):
     plt.tight_layout(rect=[0, 0, 0.9, 1])  # Make room for colorbar
     plt.show()
 
-filedPlots(phc,phcOG,gme,gmeOG,out[-1])
+#filedPlots(phc,phcOG,gme,gmeOG,out[-1])
 filedPlots(phcW1,phcW1OG,gmeW1,gmeW1OG,out[-1])
+#%%
 #%%
 def lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
     # Plot styling parameters
     STYLE = {
         'font_sizes': {
             'title': 30,
-            'label': 36,
-            'legend': 32,
+            'label': 32,
+            'legend': 24,
             'marker': 30,
-            'tick': 30,
-            'annotation': 36  # For the a, b, a', b' labels
+            'tick': 27,
+            'annotation': 36
         },
         'colors': {
             'optimized': '#EE7733',  # orange
@@ -420,7 +442,7 @@ def lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
             'zorder': 3
         },
         'axes': {
-            'x_lim': (3, 200),
+            'x_lim': (2.5, 200),
             'y_lim': (1E-3, 1E-1),
             #'x_lim': (2.5,10000),
             #'y_lim': (2.5E-4,1E-2),
@@ -436,6 +458,9 @@ def lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
             'minor_width': 1.5
         }
     }
+    if crystal == 'W1':
+        STYLE['axes']['x_lim'] = (2, 15000)
+        STYLE['axes']['y_lim'] = (2.5E-4,1E-2)
     plt.close('all')
     # Create figure with higher DPI
     plt.figure(dpi=STYLE['figure']['dpi'])
@@ -471,7 +496,7 @@ def lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
             {'x': ngOG[ks[2]]+.3, 'y': alphasOG[ks[2]]/266/1E-7+.0002, 
              'text': r'$\mathbf{a}$', 'color': colors['original'], 
              'ha': 'right', 'va': 'bottom'},
-            {'x': ngOG[ks[3]-1], 'y': alphasOG[ks[3]-1]/266/1E-7+.0025, 
+            {'x': ngOG[ks[3]-1]-3000, 'y': alphasOG[ks[3]-1]/266/1E-7+.0025, 
              'text': r'$\mathbf{b}$', 'color': colors['original'], 
              'ha': 'left', 'va': 'top'}
         ]
@@ -527,8 +552,8 @@ def lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
     if crystal == 'W1':
         plt.legend(loc='lower right', frameon=False, fontsize=fs['legend'])
         # Set custom x-axis labels for major ticks
-        ax.set_xticks([10**1, 10**2, 10**3, 10**4])
-        ax.set_xticklabels(['$10^1$', '$10^2$', '$10^3$', '$10^4$'])
+        plt.gca().set_xticks([10**1, 10**2, 10**3, 10**4])
+        plt.gca().set_xticklabels(['$10^1$', '$10^2$', '$10^3$', '$10^4$'])
     
     # Configure tick parameters for both major and minor ticks
     plt.tick_params(axis='both', which='major', 
@@ -550,8 +575,8 @@ def lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
     
     plt.show()
 
-lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,'ZIW')
-#lossVng(phcW1,gmeW1,alphasW1,ngW1,phcW1OG,gmeW1OG,alphasW1OG,ngW1OG,'W1')
+lossVng(phcZIW,gmeZIW,np.array(alphasZIW),np.array(ngZIW),phcZIWOG,gmeZIWOG,np.array(alphasZIWOG),np.array(ngZIWOG),'ZIW')
+lossVng(phcW1,gmeW1,np.array(alphasW1),np.array(ngW1),phcW1OG,gmeW1OG,np.array(alphasW1OG),np.array(ngW1OG),'W1')
 
 #%%
 def lossVfreq(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
@@ -559,10 +584,10 @@ def lossVfreq(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
     STYLE = {
         'font_sizes': {
             'title': 30,
-            'label': 36,
-            'legend': 28,
+            'label': 32,
+            'legend': 24,
             'marker': 30,
-            'tick': 30,
+            'tick': 27,
             'annotation': 36 
         },
         'colors': {
@@ -684,628 +709,420 @@ print(len(ngW1))
 with open('/home/dominic/Desktop/optGME/optGME/tests/media/ginds3/ziwBest.json','r') as file:
     out = json.load(file)
 
-phc,gme,alphas,ng = runSims(np.array(out[-1]['result']['x']),ZIW,out[-1])
-phcOG,gmeOG,alphasOG,ngOG = runSims(ZIWVars(),ZIW,out[-1]) 
+phcZIWmid,gmeZIWmid,alphasZIWmid,ngZIWmid = runSims(np.array([out[6]['x_values']]),ZIW,out[-1])
+phcZIW,gmeZIW,alphasZIW,ngZIW = runSims(np.array(out[-1]['result']['x']),ZIW,out[-1])
+phcZIWOG,gmeZIWOG,alphasZIWOG,ngZIWOG = runSims(ZIWVars(),ZIW,out[-1]) 
 #%%
 with open('/home/dominic/Desktop/optGME/optGME/tests/media/ginds3/W1Best.json','r') as file:
     out = json.load(file)
 
+phcW1mid,gmeW1mid,alphasW1mid,ngW1mid = runSims(np.array([out[5]['x_values']]),W1,out[-1])
 phcW1,gmeW1,alphasW1,ngW1 = runSims(np.array(out[-1]['result']['x']),W1,out[-1])
 phcW1OG,gmeW1OG,alphasW1OG,ngW1OG = runSims(W1Vars(),W1,out[-1]) 
 #%%
-alphas = np.array(alphas)
-alphasOG = np.array(alphasOG)
-ng = np.array(ng)
-ngOG = np.array(ngOG)
+alphas = np.array(alphasZIW)
+alphasOG = np.array(alphasZIWOG)
+ng = np.array(ngZIW)
+ngOG = np.array(ngZIWOG)
 alphasW1 = np.array(alphasW1)
 alphasW1OG = np.array(alphasW1OG)
 ngW1 = np.array(ngW1)
 ngW1OG = np.array(ngW1OG)
-
-
 #%%
-plotBands(gme,ng,out[-1],color='#EE7733')
-plotBands(gmeOG,ngOG,out[-1],color='#0077BB')
-
-plotBands(gmeW1,ngW1,out[-1],color='#EE7733')
-plotBands(gmeW1OG,ngW1OG,out[-1],color='#0077BB')
-
-#%%
-alphaImprove(alphas,alphasOG,ng,ngOG,out[-1])
-alphaImprove(alphasW1,alphasW1OG,ngW1,ngW1OG,out[-1])
-
-#%%
-filedPlots(phc,phcOG,gme,gmeOG,out[-1])
-
-# %%
-print(gmeOG.freqs[80,20])
-
-#%%
-# %%
-plt.plot(gme.freqs[150:160,19:21],'o')
-
-# %%
-import copy 
-
-gmeCopy = copy.deepcopy(gme)
-alphasCopy = copy.deepcopy(alphas)
-ngCopy = copy.deepcopy(ng)
-#%%
-with open('/Users/dominic/Desktop/optGME/tests/media/nonlinopt0_v2.json','r') as file:
+with open('/home/dominic/Desktop/optGME/optGME/tests/media/ginds3/ziwBest.json','r') as file:
     out = json.load(file)
-
-phcW1,gmeW1,alphasW1,ngW1 = runSims(W1Vars(),W1,out[-1]) 
-
+lp_alphasZIW = np.array(runNoiseSweep(np.array(out[-1]['result']['x']),ZIW,out[-1]))
 #%%
-plt.plot(gme.kpoints[0],np.array(alphasOG))
-plt.plot(gme.kpoints[0],np.array(alphasW1))
-plt.yscale('log')
-#plt.ylim(.1,1e6)
-plt.show()
-# %%
-with open('/Users/dominic/Desktop/optGME/tests/media/nonlinopt0_v2.json','r') as file:
+with open('/home/dominic/Desktop/optGME/optGME/tests/media/ginds3/W1Best.json','r') as file:
     out = json.load(file)
-
-phcW1,gmeW1,alphasW1,ngW1 = runSims(W1Vars(),W1,out[-1]) 
-#%%
-with open('/Users/dominic/Desktop/optGME/tests/media/ziwOptBasic39.json','r') as file:
-    outZIW = json.load(file)
-
-phcZIW,gmeZIW,alphasZIW,ngZIW = runSims(ZIWVars(),ZIW,outZIW[-1]) 
+lp_alphasW1 = np.array(runNoiseSweep(np.array(out[-1]['result']['x']),W1,out[-1]))
 
 #%%
-plt.plot(gmeW1.freqs[20:,20],((np.array(alphasW1[20:])*np.array(ngW1[20:])**2)/266/1E-7),'r',label='W1',linewidth=2)
-plt.plot(gmeZIW.freqs[20:118,20],((np.array(alphasZIW[20:118])*np.array(ngZIW[20:118])**2)/266/1E-7),'g',label='ZIW',linewidth=2)
-#plt.plot(gmeW1.freqs[20:,20],1/((np.array(alphasW1[20:]))/266/1E-7),'r',label='W1',linewidth=2)
-#plt.plot(gmeZIW.freqs[20:118,20],1/((np.array(alphasZIW[20:118]))/266/1E-7),'g',label='ZIW',linewidth=2)
-plt.yscale('log')
-plt.yticks([1E-1,10,1000,100000])
-plt.xlabel(r"Frequency $\omega a / 2\pi c$")
-plt.ylabel(r"$\langle\alpha_{back}\rangle$ [cm$^{-1}$]")
-# Add twin axis for ng
-ax2 = plt.twinx()
-ax2.plot(gmeW1.freqs[20:,20], np.array(ngW1[20:])**2, 'r--', alpha=0.5, linewidth=2)
-ax2.plot(gmeZIW.freqs[20:118,20], np.array(ngZIW[20:118])**2, 'g--', alpha=0.5, linewidth=2)
-ax2.set_ylabel(r"$n_g^2$")
-ax2.set_yscale('log')
-ax2.set_yticks([1E1,1E3,1E5,1E7])
+# Convert lp_alphasZIW and lp_alphasW1 to 2D arrays
+noise_alphas_ziw = np.tile(lp_alphasZIW, (len(lp_alphasZIW), 1))
+noise_alphas_w1 = np.tile(lp_alphasW1, (len(lp_alphasW1), 1))
+sigmas = np.linspace(.5,7,noise_alphas_ziw.shape[0])
 
-plt.show()
-# %%
-# %%
-plt.rcParams.update({'font.size':22})
-# Create figure with appropriate size for publication
-plt.figure(figsize=(8, 6))
+# Loop through and perform function on each row
+for i,s in enumerate(sigmas):
+    # Replace this with your desired function that operates on entire rows
+    noise_alphas_ziw[i, :] = s**2*noise_alphas_ziw[i, :]/9
 
-# Plot backscattering on left y-axis
-ax1 = plt.gca()
-ax1.plot(gmeW1.freqs[20:,20], 
-         ((np.array(alphasW1[20:])*np.array(ngW1[20:])**2)/266/1E-7),
-         color='#0077BB', linewidth=3, linestyle='-')  # Strong blue
-ax1.plot(gmeZIW.freqs[20:118,20],
-         ((np.array(alphasZIW[20:118])*np.array(ngZIW[20:118])**2)/266/1E-7),
-         color='#0077BB', linewidth=3, linestyle='--')  # Strong blue
+for i,s in enumerate(sigmas):
+    # Replace this with your desired function that operates on entire rows
+    noise_alphas_w1[i, :] = s**2*noise_alphas_w1[i, :]/9
 
-# Configure left y-axis
-ax1.set_yscale('log')
-plt.ylim(.5E-1,1E3)
-ax1.set_yticks([1E-1, 1E1, 1E3])
-ax1.set_ylabel(r"Loss $\langle\alpha_{back}\rangle$ [cm$^{-1}$]", color='#0077BB')
-ax1.set_xlabel(r"Frequency $\omega a / 2\pi c$")
-ax1.tick_params(axis='y', labelcolor='#0077BB')
-
-# Add right y-axis for group index
-ax2 = ax1.twinx()
-ax2.plot(gmeW1.freqs[20:,20], 
-         np.array(ngW1[20:])**2,
-         color='#EE7733', label='W1', linewidth=3, linestyle='-')  # Orange
-ax2.plot(gmeZIW.freqs[20:118,20],
-         np.array(ngZIW[20:118])**2, 
-         color='#EE7733', label='ZIW', linewidth=3, linestyle='--')  # Orange
-
-# Configure right y-axis  
-ax2.set_yscale('log')
-ax2.set_ylim(1E1,1E3)
-ax2.set_yticks([1E1, 1E2, 1E3])
-ax2.set_ylabel(r"$n_g^2$", color='#EE7733')
-ax2.tick_params(axis='y', labelcolor='#EE7733')
-
-# Add simplified legend
-ax1.plot([], [], 'k-', label='W1', linewidth=2)
-ax1.plot([], [], 'k--', label='ZIW', linewidth=2)
-ax1.legend(bbox_to_anchor=(.4, .6), frameon=False)
-
-# Adjust layout and display
-plt.tight_layout()
-plt.show()
-
-# %%
-orange = '#EE7733'
-blue = '#0077BB'
-
-plt.plot(np.array(ngW1[20:])**2,((np.array(alphasW1[20:]))/266/1E-7),color=orange,label='W1',linewidth=3)
-plt.plot(np.array(ngZIW[20:118])**2,((np.array(alphasZIW[20:118]))/266/1E-7),color=blue,label='ZIW',linewidth=3)
-plt.yscale('log')
-plt.xscale('log')
-plt.xlim(1E1,1E4)
-plt.ylim(2E-3,1E-1)
-plt.legend(bbox_to_anchor=(.6, .45), frameon=False,fontsize=24)
-plt.xlabel(r"Group Index $n_g^2$",fontsize=28)
-plt.ylabel(r"Loss $\langle\alpha_{back}\rangle/n_g^2$ [cm$^{-1}$]",fontsize=28)
-plt.show()
 
 
 # %%
-legume.viz.eps_xy(phc)
-# %%
-ks = np.linspace(0.25, 0.5, 25)
-gmeParamss = {'verbose':True,'numeig':21,'compute_im':False,'kpoints':np.array([[float(ks[8])],[0]]),'gmode_inds':[0,2,4]}
-out = legume.GuidedModeExp(phc,gmax=4.01)
-out.run(**gmeParamss)
-# %%
+# Font size parameters
+import matplotlib
+TITLE_FONT_SIZE = 20
+LABEL_FONT_SIZE = 18
+TICK_FONT_SIZE = 15
+CBAR_FONT_SIZE = 17
+MAJOR_TICK_LENGTH = 6
+MINOR_TICK_LENGTH = 3
+TICK_WIDTH = 1.5
 
-# %%
-from scipy.constants import c
-boundNG = []
-for i in range(len(gmeW1OG.freqs)):
-    Efield,_,_ = gmeW1OG.get_field_xy('E',i,20,phcW1OG.layers[0].d/2,Nx=60,Ny=125)
-    Hfield,_,_ = gmeW1OG.get_field_xy('H',i,20,phcW1OG.layers[0].d/2,Nx=60,Ny=125)
-    Efield = np.array([[Efield['x']],[Efield['y']],[Efield['z']]])
-    Hfield = np.array([[Hfield['x']],[Hfield['y']],[Hfield['z']]])
-    ng = 1/(np.sum(np.real(np.cross(np.conj(Efield),Hfield,axis=0)))*phcW1OG.lattice.a2[1]/60/125*phcW1OG.layers[0].d)
-    boundNG.append(ng)
-#%%
-boundNG = np.array(boundNG)
-# Find indices where ng is approximately 5, 10, 20, 50, and 100
-target_ngs = [5, 10, 30, 100]
-indices = []
+# Create figure with specific size for side-by-side square plots and high DPI
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(5, 2.5), dpi=400, 
+                               gridspec_kw={'wspace': 0.1, 'hspace': 0.0})
+normed_noise_alphas_ziw = noise_alphas_ziw/266/1E-7
+normed_noise_alphas_w1 = noise_alphas_w1/266/1E-7
 
-for target in target_ngs:
-    # Find the index where ng is closest to the target value
-    idx = np.argmin(np.abs(boundNG - target))
-    indices.append(idx)
+# Find global min/max for consistent colorbar (using raw values, not log10)
+vmin = min(normed_noise_alphas_ziw.min(), normed_noise_alphas_w1.min())
+vmax = max(normed_noise_alphas_ziw.max(), normed_noise_alphas_w1.max())
 
-# Plot the full ng data
-plt.figure(figsize=(10, 6))
-plt.plot(boundNG)
+# Define x and y axis values
+x_vals = np.logspace(np.log10(10), np.log10(300), 500)
+y_vals = sigmas
 
-# Add dots at the specific indices
-for i, idx in enumerate(indices):
-    plt.plot(idx, boundNG[idx], 'ro', markersize=8)
-    plt.annotate(f'ng={target_ngs[i]}, idx={idx}', 
-                 xy=(idx, boundNG[idx]), 
-                 xytext=(10, 0), 
-                 textcoords='offset points',
-                 fontsize=12)
-
-plt.yscale('log')
-plt.xlabel('Index', fontsize=14)
-plt.ylabel('Group Index (ng)', fontsize=14)
-plt.title('Group Index with Markers at Specific Values', fontsize=16)
-plt.grid(True, which='both', linestyle='--', alpha=0.7)
-plt.show()
-# %%
-with open('/Users/dominic/Desktop/optGME/tests/media/ginds3/ziwBest.json','r') as file:
-    outZIW = json.load(file)
-
-with open('/Users/dominic/Desktop/optGME/tests/media/ginds3/W1Best.json','r') as file:
-    outW1 = json.load(file)
-
-W1opt = []
-W1CV = []
-ZIWopt = []
-ZIWCV = []
-for p in outW1[:-1]:
-    W1opt.append(p['objective_value'])
-    W1CV.append(p['constraint_violation'])
-for p in outZIW[:-1]:
-    ZIWopt.append(p['objective_value'])
-    ZIWCV.append(p['constraint_violation'])
-
-W1opt = 10**(np.array(W1opt))/266/1E-7
-W1optPlot = np.array(W1opt)/W1opt[0]
-ZIWopt = 10**(np.array(ZIWopt))/266/1E-7
-ZIWoptPlot = np.array(ZIWopt)/ZIWopt[0]
-# %%
-# Create separate figures for W1 and ZIW optimization plots
-# Control font size, figure dimensions and DPI at the top level
-FONT_SIZE_TITLE = 18
-FONT_SIZE_AXIS_LABEL = 18
-FONT_SIZE_TICK_LABELS = 15
-FONT_SIZE_ANNOTATION = 16
-FIGURE_WIDTH = 7
-FIGURE_HEIGHT = 4
-FIGURE_DPI = 300
-FIGURE_ASPECT_RATIO = 0.65  # height/width ratio
-LINEWIDTH = 2.5
-MARKER_SIZE = 6
-
-# First figure: W1 Optimization
-fig1, ax1 = plt.subplots(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT), dpi=FIGURE_DPI)
-
-# Set log scales for W1 plot
-ax1.set_yscale('log')
+# Create log-scaled image for W1 (left) - using LogNorm for proper log scaling
+im1 = ax1.imshow(normed_noise_alphas_w1, origin='lower', aspect='auto', 
+                 cmap='plasma', norm=matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax),
+                 extent=[x_vals[0], x_vals[-1], y_vals[0], y_vals[-1]])
+ax1.set_ylabel(r'Roughness $\sigma$ [nm]', fontsize=LABEL_FONT_SIZE)
+ax1.tick_params(axis='both', which='major', labelsize=TICK_FONT_SIZE, 
+                length=MAJOR_TICK_LENGTH, width=TICK_WIDTH)
+ax1.tick_params(axis='both', which='minor', length=MINOR_TICK_LENGTH, width=TICK_WIDTH)
 ax1.set_xscale('log')
 
-# Highlight regions where constraint violation is non-zero for W1
-violation_regions_w1 = []
-start = None
+# Add inset title for W1 with white backing
+ax1.text(0.92, 0.92, 'W1', transform=ax1.transAxes, fontsize=TITLE_FONT_SIZE, 
+         bbox=dict(boxstyle="round,pad=0.25", facecolor='white', alpha=0, edgecolor='none'),
+         verticalalignment='top',horizontalalignment='right')
 
-# Find continuous regions of constraint violations for W1
-for i in range(len(W1optPlot)):
-    if W1CV[i] > 0 and start is None:
-        start = i
-    elif W1CV[i] <= 0 and start is not None:
-        violation_regions_w1.append((start, i))
-        start = None
+# Add red X with black outline at sigma=3, lp=40 for W1
+ax1.plot(40, 3, 'rx', markersize=9, markeredgewidth=3, markeredgecolor='black', 
+         transform=ax1.transData, zorder=10)
 
-# Add the last region if it extends to the end
-if start is not None:
-    violation_regions_w1.append((start, len(W1optPlot)))
-
-# Add dashed horizontal lines for initial and final values for W1
-initial_value_w1 = W1optPlot[0]
-final_value_w1 = W1optPlot[-1]
-ax1.axhline(y=initial_value_w1, color='k', linestyle='--', alpha=0.7, zorder=0)
-ax1.axhline(y=final_value_w1, color='k', linestyle='--', alpha=0.7, zorder=0)
-
-# Plot W1 optimization data
-x_values = np.arange(1, len(W1optPlot) + 1)  # Start from 1 for log scale
-
-# Plot base line first
-ax1.plot(x_values, W1optPlot, 'b-', linewidth=LINEWIDTH, zorder=2)
-
-# Add markers with different colors based on constraint violation
-for i, val in enumerate(W1optPlot):
-    idx = i + 1  # Adjust for 1-based indexing in plot
-    in_violation = any(start <= i < end for start, end in violation_regions_w1)
-    if in_violation:
-        ax1.plot(idx, val, 'ro', markersize=MARKER_SIZE, zorder=3, markeredgecolor='darkred', fillstyle='none')
-    else:
-        ax1.plot(idx, val, 'o', markersize=MARKER_SIZE, markeredgecolor='darkblue', zorder=3, fillstyle='none')
-
-# Add violation regions
-for start, end in violation_regions_w1:
-    ax1.axvspan(start + 1, end + 1, alpha=0.2, color='#FF000080', edgecolor=None)
-
-# Add labels for initial and final values for W1, formatted for small numbers
-ax1.text(len(W1optPlot)*0.1, initial_value_w1*1.2, f'Initial: {W1opt[0]:.5f}', 
-         verticalalignment='bottom', horizontalalignment='right', fontsize=FONT_SIZE_ANNOTATION, 
-         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
-ax1.text(len(W1optPlot)*0.1, final_value_w1*0.8, f'Final: {W1opt[-1]:.5f}', 
-         verticalalignment='top', horizontalalignment='right', fontsize=FONT_SIZE_ANNOTATION,
-         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
-
-ax1.set_title('W1 Optimization', fontsize=FONT_SIZE_TITLE, fontweight='bold')
-ax1.set_xlabel('Iteration', fontsize=FONT_SIZE_AXIS_LABEL)
-ax1.set_ylabel(r'$\left[\tilde{L}^{\text{W1}}/\tilde{L}^{\text{W1}}_0\right]_{\tilde{k}=.33}$', fontsize=FONT_SIZE_AXIS_LABEL)
-ax1.set_xlim(1, len(W1optPlot))  # Start from 1 for log scale
-ax1.grid(True, linestyle='--', alpha=0.3, which='both')
-ax1.tick_params(axis='both', which='major', labelsize=FONT_SIZE_TICK_LABELS)
-ax1.set_ylim(.07, 3)
-
-# Make the plot wider
-ax1.set_box_aspect(FIGURE_ASPECT_RATIO)
-
-plt.tight_layout()
-plt.show()
-
-# Second figure: ZIW Optimization
-fig2, ax2 = plt.subplots(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT), dpi=FIGURE_DPI)
-
-# Set log scales for ZIW plot
-ax2.set_yscale('log')
+# Create log-scaled image for ZIW (right) - using LogNorm for proper log scaling
+im2 = ax2.imshow(normed_noise_alphas_ziw, origin='lower', aspect='auto', 
+                 cmap='plasma', norm=matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax),
+                 extent=[x_vals[0], x_vals[-1], y_vals[0], y_vals[-1]])
+ax2.tick_params(axis='both', which='major', labelsize=TICK_FONT_SIZE,
+                length=MAJOR_TICK_LENGTH, width=TICK_WIDTH)
+ax2.tick_params(axis='both', which='minor', length=MINOR_TICK_LENGTH, width=TICK_WIDTH)
 ax2.set_xscale('log')
+# Remove y-axis ticks and labels for right plot since they're shared
+ax2.tick_params(axis='y', which='both', left=False, labelleft=False)
 
-# Highlight regions where constraint violation is non-zero for ZIW
-violation_regions_ziw = []
-start = None
+# Add inset title for ZIW with white backing
+ax2.text(0.92, 0.92, 'ZIW', transform=ax2.transAxes, fontsize=TITLE_FONT_SIZE, 
+         bbox=dict(boxstyle="round,pad=0.25", facecolor='white', alpha=0, edgecolor='none'),
+         verticalalignment='top',horizontalalignment='right')
 
-# Find continuous regions of constraint violations for ZIW
-for i in range(len(ZIWoptPlot)):
-    if ZIWCV[i] > 0 and start is None:
-        start = i
-    elif ZIWCV[i] <= 0 and start is not None:
-        violation_regions_ziw.append((start, i))
-        start = None
+# Add red X with black outline at sigma=3, lp=40 for ZIW
+ax2.plot(40, 3, 'rx', markersize=9, markeredgewidth=3, markeredgecolor='black', 
+         transform=ax2.transData, zorder=10)
 
-# Add the last region if it extends to the end
-if start is not None:
-    violation_regions_ziw.append((start, len(ZIWoptPlot)))
+# Add shared x-axis label below both plots in the middle
+fig.text(0.55, -.1, r'Correlation Length $l_p$ [nm]', fontsize=LABEL_FONT_SIZE, 
+         ha='center', va='center')
 
-# Add dashed horizontal lines for initial and final values for ZIW
-initial_value_ziw = ZIWoptPlot[0]
-final_value_ziw = ZIWoptPlot[-1]
-ax2.axhline(y=initial_value_ziw, color='k', linestyle='--', alpha=0.7, zorder=0)
-ax2.axhline(y=final_value_ziw, color='k', linestyle='--', alpha=0.7, zorder=0)
+# Create chunkier colorbar above the plots with text and ticks above the colorbar
+cbar_ax = fig.add_axes([0.135, .95, 0.75, 0.07])  # [left, bottom, width, height] - positioned above plots, made chunkier
+cbar = plt.colorbar(im1, cax=cbar_ax, orientation='horizontal')
+cbar.set_label(r'$\tilde L$ [cm$^{-1}$]', fontsize=CBAR_FONT_SIZE, labelpad=10)
+cbar.ax.tick_params(labelsize=TICK_FONT_SIZE, length=MAJOR_TICK_LENGTH, width=TICK_WIDTH, top=True, bottom=False)
+cbar.ax.tick_params(axis='both', which='minor', length=MINOR_TICK_LENGTH, width=1.5)
+cbar.ax.xaxis.set_label_position('top')
+cbar.ax.xaxis.tick_top()
+# Set specific tick locations and labels
+cbar.set_ticks([.01,.001,.0001,.00001])
+cbar.set_ticklabels([r'$10^{-2}$', r'$10^{-3}$', r'$10^{-4}$', r'$10^{-5}$'])
+# Reverse the colorbar direction to go from large to small values left to right
 
-# Plot ZIW optimization data
-x_values = np.arange(1, len(ZIWoptPlot) + 1)  # Start from 1 for log scale
-
-# Plot base line first
-ax2.plot(x_values, ZIWoptPlot, 'g-', linewidth=LINEWIDTH, zorder=2)
-
-# Add markers with different colors based on constraint violation
-for i, val in enumerate(ZIWoptPlot):
-    idx = i + 1  # Adjust for 1-based indexing in plot
-    in_violation = any(start <= i < end for start, end in violation_regions_ziw)
-    if in_violation:
-        ax2.plot(idx, val, 'ro', markersize=MARKER_SIZE, zorder=3, markeredgecolor='darkred', fillstyle='none')
-    else:
-        ax2.plot(idx, val, 'o', markersize=MARKER_SIZE, markeredgecolor='darkgreen', zorder=3, fillstyle='none')
-
-# Add violation regions
-for start, end in violation_regions_ziw:
-    ax2.axvspan(start + 1, end + 1, alpha=0.2, color='#FF000080', edgecolor=None)
-
-# Add labels for initial and final values for ZIW, formatted for small numbers
-ax2.text(len(ZIWoptPlot)*0.9, initial_value_ziw*1.2, f'Initial: {ZIWopt[0]:.5f}', 
-         verticalalignment='bottom', horizontalalignment='right', fontsize=FONT_SIZE_ANNOTATION,
-         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
-ax2.text(len(ZIWoptPlot)*0.9, final_value_ziw*0.75, f'Final: {ZIWopt[-1]:.5f}', 
-         verticalalignment='top', horizontalalignment='right', fontsize=FONT_SIZE_ANNOTATION,
-         bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=2))
-
-ax2.set_title('ZIW Optimization', fontsize=FONT_SIZE_TITLE, fontweight='bold')
-ax2.set_xlabel('Iteration', fontsize=FONT_SIZE_AXIS_LABEL)
-ax2.set_ylabel(r'$\left[\tilde{L}^{\text{ZIW}}/\tilde{L}^{\text{ZIW}}_0\right]_{\tilde{k}=.33}$', fontsize=FONT_SIZE_AXIS_LABEL)
-ax2.set_xlim(1, len(ZIWoptPlot))  # Start from 1 for log scale
-ax2.grid(True, linestyle='--', alpha=0.3, which='both')
-ax2.tick_params(axis='both', which='major', labelsize=FONT_SIZE_TICK_LABELS)
-ax2.set_ylim(.005, 20)
-
-# Make the plot wider
-ax2.set_box_aspect(FIGURE_ASPECT_RATIO)
-
+# Adjust layout to prevent label cutoff
 plt.tight_layout()
-plt.show()
 # %%
-from optomization import W1,ZIW
-
-phcW1opt = W1(vars=np.array(outW1[-1]['result']['x']))
-phcZIWopt = ZIW(vars=np.array(outZIW[-1]['result']['x']))
-phcW1OG = W1(NyChange=0)
-phcZIWOG = ZIW(NyChange=0)
-
-shapesW1 = phcW1OG.layers[0].shapes
-shapesZIW = phcZIWOG.layers[0].shapes
-shapesW1Opt = phcW1opt.layers[0].shapes
-shapesZIWOpt = phcZIWopt.layers[0].shapes
+x_vals
 # %%
-# Create a figure for plotting the W1 structure with flipped axes and grey background
-fig, ax = plt.subplots(figsize=(10, 6))
-fig.patch.set_facecolor('white')  # Set figure background to white
+ibm_colors={
+    "blue": "#5596E6",
+    "purple": "#9855D4",
+    "magenta": "#E71D73",
+    "orange": "#FF6F00",
+    "yellow": "#FDD600",
+}
 
-# Create a grey background using imshow with uniform values
-# Value 0.75 gives a medium grey (can be adjusted between 0-1)
-grey_level = 0.75  # Adjust this value between 0 (black) and 1 (white) for different grey shades
-ax.imshow(np.ones((100, 100)) * grey_level, cmap='gray', 
-          extent=[-5, 5, -0.5, 2.5], alpha=1.0, aspect='auto', zorder=0,vmin=0,vmax=1)
+def plotBands(gme,gmemid,gmefinal,ng,params,color='red',plotback=True,index=0,index2=1):
+    blue = '#0077BB'
+    orange = '#EE7733'
+    green = '#66CC99'
+    dark_blue = '#004488'
+    dark_orange = '#CC6622'
 
-# Define the zigzag boundaries for the darker region
-x_left = -2.75
-x_right = 2.75
-# Create a darker grey polygon that follows the zigzag pattern
-vertices = []
-# Add points for left zigzag boundary (bottom to top)
-for i in range(-1, 5):
-    vertices.append((x_left, i))
-    vertices.append((x_left-0.5, i+0.5))
-# Add top-right corner
-vertices.append((x_right+0.5, 4.5))
-# Add points for right zigzag boundary (top to bottom)
-for i in range(4, -2, -1):
-    vertices.append((x_right+0.5, i+0.5))
-    vertices.append((x_right, i))
-# Close the polygon
-vertices.append(vertices[0])
-
-# Create polygon for darker region
-darker_poly = plt.Polygon(vertices, closed=True, facecolor='grey', alpha=0.5, zorder=0.5)
-ax.add_patch(darker_poly)
-
-# Plot the circles from the original W1 structure as white holes
-for c in shapesW1:
-    # Create a circle with flipped x,y coordinates (y as horizontal axis, x as vertical axis)
-    circle = plt.Circle((c.y_cent, c.x_cent), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
-    ax.add_patch(circle)
+    # Font size parameters
+    TITLE_FONT_SIZE = 34
+    LABEL_FONT_SIZE = 34
+    ANNOTATION_FONT_SIZE = 40
+    TICK_FONT_SIZE = 28
     
-    # Repeat circles in negative x direction (now vertical direction after flip)
-    circle = plt.Circle((c.y_cent, c.x_cent - 1), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
-    ax.add_patch(circle)
+    #missilanius variables needed
+    conFac = 1e-12*299792458/params['cost']['a']/1e-9
+    if index==0 or index==1:
+        freqmin, freqmax = .245, .282
+    elif index==2 or index==3:
+        freqmin, freqmax = .238, .282
+    mode = params['mode']
+    kindex = np.abs(gme.kpoints[0,:] - params['gmeParams']['kpoints'][0][0]).argmin()
+    print('kindex ',kindex)
+    print('ng ',ng[kindex])
+    # Generate some sample data
+    ks = np.linspace(0.25, 0.5, nk)
+
+    # Create figure and define gridspec layout
+    fig = plt.figure(figsize=(6.4, 5.8),dpi=400)
+
+    # Main subplot (dispersion curve)
+    ax2 = plt.gca()
+    ax2.set_xlabel(r"Wavevector $\tilde k$",fontsize=LABEL_FONT_SIZE)
+    ax2.set_ylabel(r"Frequency $\omega a / 2\pi c$",fontsize=LABEL_FONT_SIZE)
+    ax2.set_xlim(0.25, 0.5)
+    ax2.set_ylim(freqmin,freqmax)
+    ax2.tick_params(axis='both', which='major', labelsize=TICK_FONT_SIZE)
+
+    #plot frequency plot 
+    ax2.fill_between(ks,ks,np.max(ks),color='darkGray',alpha=1) #light line
+    ax2.fill_between(ks,gmefinal.freqs[:,mode-1],np.zeros_like(ks),color=ibm_colors['orange'],alpha=.7) #continums
+    ax2.fill_between(ks,gme.freqs[:,mode-1],np.zeros_like(ks),color=ibm_colors['purple'],alpha=.7) #continums\
+    ax2.plot(ks,gme.freqs[:,mode],color=ibm_colors['purple'],linewidth=3,zorder=2) #band of interest
+    if plotback:
+        ax2.plot(ks,gme.freqs[:,mode+1],color=ibm_colors['purple'],linewidth=3,linestyle='--') #other band
+    else:
+        ax2.plot(ks[50:],gme.freqs[50:,mode+1],color=ibm_colors['purple'],linewidth=3,linestyle='--') #other band
+    ax2.plot(ks,gmemid.freqs[:,mode],color=ibm_colors['blue'],linewidth=3,zorder=2) #band of interest
+    ax2.plot(ks,gmefinal.freqs[:,mode],color=ibm_colors['orange'],linewidth=3,zorder=2) #band of interest
+    if plotback:
+        ax2.plot(ks,gmefinal.freqs[:,mode+1],color=ibm_colors['orange'],linewidth=3,linestyle='--') #other band
+    else:
+        ax2.plot(ks[50:],gmefinal.freqs[50:,mode+1],color=ibm_colors['orange'],linewidth=3,linestyle='--') #other band
+
+    se = [24,113,15,149,39,84,13,89]
+    ax2.scatter([ks[se[2*index]],ks[se[2*index+1]]],[gme.freqs[se[2*index],mode],gme.freqs[se[2*index+1],mode]],s=150,color=ibm_colors['purple'],zorder=3,edgecolor='black', linewidth=1.5)
+    ax2.scatter([ks[se[2*index2]],ks[se[2*index2+1]]],[gmefinal.freqs[se[2*index2],mode],gmefinal.freqs[se[2*index2+1],mode]],s=150,color=ibm_colors['orange'],zorder=3,edgecolor='black', linewidth=1.5)
+
+    # Add text labels with slight offset for better visibility
+    if index==0:a,b = r'$\mathbf{a}^\prime$',r'$\mathbf{b}^\prime$'
+    elif index==1:a,b = r'$\mathbf{a}$',r'$\mathbf{b}$'
+    elif index==2:a,b = r'$\mathbf{c}^\prime$',r'$\mathbf{d}^\prime$'
+    elif index==3:a,b = r'$\mathbf{c}$',r'$\mathbf{d}$'
+    if index>=2:
+        xytext1 = (5, -25)
+        xytext2 = (15, -5)
+    else:
+        xytext1 = (5, 5)
+        xytext2 = (-25, 10)
+    ax2.annotate(a, 
+                 (ks[se[2*index]], gme.freqs[se[2*index], mode]),
+                 xytext=xytext1,
+                 textcoords='offset points',
+                 color=ibm_colors['purple'],
+                 fontsize=ANNOTATION_FONT_SIZE) 
+    ax2.annotate(b, 
+                 (ks[se[2*index+1]], gme.freqs[se[2*index+1], mode]),
+                 xytext=xytext2,
+                 textcoords='offset points',
+                 color=ibm_colors['purple'],
+                 fontsize=ANNOTATION_FONT_SIZE)
     
-    # Repeat circles in positive direction to show additional 3 unit copies
-    for i in range(1, 3):
-        circle = plt.Circle((c.y_cent, c.x_cent + i), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
-        ax.add_patch(circle)
+    # Add vertical red dashed line at specified value
+    ax2.axvline(x=0.33333, color=ibm_colors['magenta'], linestyle='--', alpha=0.8, linewidth=3)
+
+    # Add text labels with slight offset for better visibility
+    if index2==0:a,b = r'$\mathbf{a}^\prime$',r'$\mathbf{b}^\prime$'
+    elif index2==1:a,b = r'$\mathbf{a}$',r'$\mathbf{b}$'
+    elif index2==2:a,b = r'$\mathbf{c}^\prime$',r'$\mathbf{d}^\prime$'
+    elif index2==3:a,b = r'$\mathbf{c}$',r'$\mathbf{d}$'
+    if index2>=2:
+        xytext1 = (-8, 12)
+        xytext2 = (5, 15)
+    else:
+        xytext1 = (-25, -40)
+        xytext2 = (-15, -40)
+    ax2.annotate(a, 
+                 (ks[se[2*index2]], gmefinal.freqs[se[2*index2], mode]),
+                 xytext=xytext1,
+                 textcoords='offset points',
+                 color=ibm_colors['orange'],
+                 fontsize=ANNOTATION_FONT_SIZE) 
+    ax2.annotate(b, 
+                 (ks[se[2*index2+1]], gmefinal.freqs[se[2*index2+1], mode]),
+                 xytext=xytext2,
+                 textcoords='offset points',
+                 color=ibm_colors['orange'],
+                 fontsize=ANNOTATION_FONT_SIZE)
+
+    # Add inset title for ZIW with white backing
+    ax2.text(0.95, 0.95, 'W1', transform=ax2.transAxes, fontsize=TITLE_FONT_SIZE, 
+             bbox=dict(boxstyle="round,pad=0.25", facecolor='white', alpha=0.7, edgecolor='none'),
+             verticalalignment='top',horizontalalignment='right')
+
     
-# Plot the circles from the optimized W1 structure as red dashed circles
-for c in shapesW1Opt:
-    # Create a circle with flipped x,y coordinates
-    circle = plt.Circle((c.y_cent, c.x_cent), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
-    ax.add_patch(circle)
-    
-    # Repeat circles in negative x direction
-    circle = plt.Circle((c.y_cent, c.x_cent - 1), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
-    ax.add_patch(circle)
-    
-    # Repeat circles in positive direction to show additional 3 unit copies
-    for i in range(1, 3):
-        circle = plt.Circle((c.y_cent, c.x_cent + i), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
-        ax.add_patch(circle)
+    plt.show()
 
-# Add dashed white lines for Voronoi cell walls between 3rd and 4th circles
-# Left side (negative x)
-# Draw zigzag lines along the hexagon edges on the left side
-x_left = -2.75
-for i in range(-1, 5):
-    # Draw segments of the zigzag pattern - each segment is 1/2 of hexagon height
-    ax.plot([x_left, x_left-0.5], [i, i+0.5], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
-    ax.plot([x_left-0.5, x_left], [i+0.5, i+1], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
-
-# Draw zigzag lines along the hexagon edges on the right side
-x_right = 2.75
-for i in range(-1, 5):
-    # Draw segments of the zigzag pattern - each segment is 1/2 of hexagon height
-    ax.plot([x_right, x_right+0.5], [i, i+0.5], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
-    ax.plot([x_right+0.5, x_right], [i+0.5, i+1], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
-
-# Set axis limits to show 5 holes on either side of center (expanded y range)
-ax.set_xlim(-5*np.sqrt(3)/2, 5*np.sqrt(3)/2)  # More of the y-axis (now horizontal)
-ax.set_ylim(-0.5, 2.5)  # From x=-0.5 to x=3.5 after adding 3 more unit cells
-ax.set_aspect('equal')
-ax.grid(False)
-ax.axis('off')  # No labels or axis lines as requested
-
-# Remove all padding
-plt.tight_layout(pad=0)
-plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
-
-
-
-# Add a small xy axis indicator in the lower left
-# First create a white background for the axis without border
-rect = plt.Rectangle((-4, -0.4), 1.25, 1.0, facecolor='white', edgecolor='none', alpha=0.8, zorder=5)
-ax.add_patch(rect)
-
-# Create a small axis indicator showing flipped coordinates
-arrow_length = 0.5
-arrow_start_x, arrow_start_y = -3.75, -0.2
-
-# Draw y-axis (horizontal, since coordinates are flipped)
-ax.arrow(arrow_start_x, arrow_start_y, arrow_length, 0, 
-         head_width=0.12, head_length=0.12, fc='black', ec='black', linewidth=2.5, zorder=6)
-ax.text(arrow_start_x + arrow_length + 0.05, arrow_start_y + 0.25, 'y', fontsize=26, fontweight='bold', zorder=6)
-
-# Draw x-axis (vertical, since coordinates are flipped)
-ax.arrow(arrow_start_x, arrow_start_y, 0, arrow_length, 
-         head_width=0.12, head_length=0.12, fc='black', ec='black', linewidth=2.5, zorder=6)
-ax.text(arrow_start_x + 0.25, arrow_start_y + arrow_length + 0.08, 'x', fontsize=26, fontweight='bold', zorder=6)
-
-
-plt.show()
-
-# %%
-# Create a figure for plotting the ZIW structure with flipped axes and grey background
-fig, ax = plt.subplots(figsize=(10, 6))
-fig.patch.set_facecolor('white')  # Set figure background to white
-
-# Add horizontal offset parameter to shift all circles left or right
-x_offset = -np.sqrt(3)/2/6  # Change this value to shift circles horizontally (negative = left, positive = right)
-
-# Define region boundaries for different shadings
-x_left = -3.25*np.sqrt(3)/2 - x_offset
-x_right = 3.25*np.sqrt(3)/2 + x_offset
-
-# Create a grey background using imshow with uniform values
-# Value 0.75 gives a medium grey (can be adjusted between 0-1)
-grey_level = 0.75  # Adjust this value between 0 (black) and 1 (white) for different grey shades
-ax.imshow(np.ones((100, 100)) * grey_level, cmap='gray', 
-          extent=[-5 + x_offset, 5 + x_offset, -0.5, 2.5], alpha=1.0, aspect='auto', zorder=0,vmin=0,vmax=1)
-
-# Add a darker grey region between the dashed white lines
-darker_grey_level = 0.65  # Darker than the background grey (0.75)
-ax.imshow(np.ones((100, 100)) * darker_grey_level, cmap='gray',
-          extent=[x_left, x_right, -0.5, 2.5], alpha=1.0, aspect='auto', zorder=0.5, vmin=0, vmax=1)
-
-# Plot the circles from the original ZIW structure as white holes
-for c in shapesZIW:
-    # Create a circle with flipped x,y coordinates (y as horizontal axis, x as vertical axis)
-    # Apply the x_offset to the y coordinate (since axes are flipped)
-    circle = plt.Circle((c.y_cent + x_offset, c.x_cent), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
-    ax.add_patch(circle)
-    
-    # Repeat circles in negative x direction (now vertical direction after flip)
-    circle = plt.Circle((c.y_cent + x_offset, c.x_cent - 1), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
-    ax.add_patch(circle)
-    
-    # Repeat circles in positive direction to show additional 3 unit copies
-    for i in range(1, 3):
-        circle = plt.Circle((c.y_cent + x_offset, c.x_cent + i), c.r, facecolor='white', edgecolor='black', alpha=1.0, zorder=1)
-        ax.add_patch(circle)
-    
-# Plot the circles from the optimized ZIW structure as red dashed circles
-for c in shapesZIWOpt:
-    # Create a circle with flipped x,y coordinates
-    circle = plt.Circle((c.y_cent + x_offset, c.x_cent), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
-    ax.add_patch(circle)
-    
-    # Repeat circles in negative x direction
-    circle = plt.Circle((c.y_cent + x_offset, c.x_cent - 1), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
-    ax.add_patch(circle)
-    
-    # Repeat circles in positive direction to show additional 3 unit copies
-    for i in range(1, 3):
-        circle = plt.Circle((c.y_cent + x_offset, c.x_cent + i), c.r, facecolor='none', edgecolor='red', alpha=1.0, linestyle='--', linewidth=4, zorder=2)
-        ax.add_patch(circle)
-
-# Add dashed white vertical lines for Voronoi cell walls between 3rd and 4th circles
-# Left side (negative x)
-ax.plot([x_left, x_left], [-1, 5], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
-
-# Right side (positive x)
-ax.plot([x_right, x_right], [-1, 5], color='white', linestyle='--', linewidth=2, alpha=0.8, zorder=1.5)
-
-# Set axis limits to show 5 holes on either side of center (expanded y range)
-ax.set_xlim(-5*np.sqrt(3)/2, 5*np.sqrt(3)/2)  # More of the y-axis (now horizontal)
-ax.set_ylim(-0.5, 2.5)  # From x=-0.5 to x=3.5 after adding 3 more unit cells
-ax.set_aspect('equal')
-ax.grid(False)
-ax.axis('off')  # No labels or axis lines as requested
-
-# Remove all padding
-plt.tight_layout(pad=0)
-plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
-# Add a small xy axis indicator in the lower left
-# First create a white background for the axis without border
-rect = plt.Rectangle((-4 + x_offset, -0.4), 1.25, 1.0, facecolor='white', edgecolor='none', alpha=0.8, zorder=5)
-ax.add_patch(rect)
-
-# Create a small axis indicator showing flipped coordinates
-arrow_length = 0.5
-arrow_start_x, arrow_start_y = -3.75 + x_offset, -0.2
-
-# Draw y-axis (horizontal, since coordinates are flipped)
-ax.arrow(arrow_start_x, arrow_start_y, arrow_length, 0, 
-         head_width=0.12, head_length=0.12, fc='black', ec='black', linewidth=2.5, zorder=6)
-ax.text(arrow_start_x + arrow_length + 0.05, arrow_start_y + 0.25, 'y', fontsize=26, fontweight='bold', zorder=6)
-
-# Draw x-axis (vertical, since coordinates are flipped)
-ax.arrow(arrow_start_x, arrow_start_y, 0, arrow_length, 
-         head_width=0.12, head_length=0.12, fc='black', ec='black', linewidth=2.5, zorder=6)
-ax.text(arrow_start_x + 0.25, arrow_start_y + arrow_length + 0.08, 'x', fontsize=26, fontweight='bold', zorder=6)
-
-plt.show()
-# %%
-with open('/Users/dominic/Desktop/optGME/tests/media/ginds3/ziwBest.json','r') as file:
-    outZIW = json.load(file)
-#%%
-varsMin = np.array(outZIW[6]['x_values'])
-varsMax = np.array(outZIW[7]['x_values'])
-# %%
-from optomization.crystals import ZIW
-ZIWMin = ZIW(vars=varsMin)
-ZIWMax = ZIW(vars=varsMax)
-# %%
-kmin,kmax = .5*np.pi,np.pi
-nk=25
-params = outZIW[-1]
-gmeParams = params['gmeParams'].copy()
-gmeParams['kpoints']=np.vstack((np.linspace(kmin,kmax,nk),np.zeros(nk)))
-gmeParams['verbose']=True
-gmeParams['numeig']+=25
-gmeZIWMin = legume.GuidedModeExp(ZIWMin,gmax=params['gmax'])
-gmeZIWMin.run(**gmeParams)
-# %%
-gmeZIWMax = legume.GuidedModeExp(ZIWMax,gmax=params['gmax'])
-gmeZIWMax.run(**gmeParams)
+plotBands(gmeZIWOG,gmeZIWmid,gmeZIW,ngZIW,out[-1],color='#EE7733',plotback=False,index=3,index2=2)
+plotBands(gmeW1OG,gmeW1mid,gmeW1,ngW1,out[-1],color='#0077BB',plotback=True,index=1,index2=0)
 # %%
 
+def filedPlots(phc,phcMid,phcOG,gme,gmeMid,gmeOG,params):
+    # Font size variables for consistent styling
+    TITLE_SIZE = 28
+    LABEL_SIZE = 26
+    TICK_SIZE = 20
+    LEGEND_SIZE = 24
+    COLORBAR_LABEL_SIZE = 32
+    COLORBAR_TICK_SIZE = 28
+    
+    # Set up variables
+    ylim = 8*np.sqrt(3)/2
+    ys = np.linspace(-ylim/2, ylim/2, 300)
+    mode = params['mode']
+    kindex = np.abs(gme.kpoints[0,:] - params['gmeParams']['kpoints'][0][0]).argmin()
+    # kindex = 190
+    z = phc.layers[0].d/2
+
+    # Get field of original crystal
+    fieldsOG, _, _ = gmeOG.get_field_xy('E', kindex, mode, z, ygrid=ys, component='xyz')
+    eabsOG = np.sqrt(np.abs(np.conj(fieldsOG['x'])*fieldsOG['x'] + np.conj(fieldsOG['y'])*fieldsOG['y'] + np.conj(fieldsOG['z'])*fieldsOG['z']))
+    fields, _, _ = gme.get_field_xy('E', kindex, mode, z, ygrid=ys, component='xyz')
+    eabs = np.sqrt(np.abs(np.conj(fields['x'])*fields['x'] + np.conj(fields['y'])*fields['y'] + np.conj(fields['z'])*fields['z']))
+    fieldsMid, _, _ = gmeMid.get_field_xy('E', kindex, mode, z, ygrid=ys, component='xyz')
+    eabsMid = np.sqrt(np.abs(np.conj(fieldsMid['x'])*fieldsMid['x'] + np.conj(fieldsMid['y'])*fieldsMid['y'] + np.conj(fieldsMid['z'])*fieldsMid['z']))
+    maxF = np.max([np.max(eabsOG), np.max(eabs), np.max(eabsMid)])
+    
+    # Optional parameters to control the field view|
+    x_offset = 0  # Adjust to shift the center of the view left or right
+    x_crop = 0    # Adjust to crop from the right side (0 for no cropping)
+    
+    # Calculate the actual x limits based on the parameters
+    x_min = -ylim/2 + x_offset
+    x_max = ylim/2 + x_offset - x_crop
+    
+    # Create a figure with three subplots side by side
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(3, 4.8),dpi=400)
+    
+    # Plot optimized field on left subplot (vertical orientation)
+    cax1 = ax1.imshow(eabs, extent=[-.5, .5, -ylim/2, ylim/2], cmap='plasma', vmax=maxF, vmin=0, zorder=1)
+    circles1 = [Circle((s.x_cent, s.y_cent), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phc.layers[0].shapes]
+    cirlcesArround1 = [Circle((0, 0), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phc.layers[0].shapes]
+    for c, ca in zip(circles1, cirlcesArround1):
+        ax1.add_patch(c)
+        ca.center = (c.center[0]-np.sign(c.center[0]), c.center[1])
+        ax1.add_patch(ca)
+    ax1.set_xlim(-.5, .5)
+    ax1.set_ylim(x_min, x_max)
+    ax1.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False, 
+                   labelbottom=False, labelleft=False)
+    
+    # Plot mid field on center subplot (vertical orientation)
+    cax2 = ax2.imshow(eabsMid, extent=[-.5, .5, -ylim/2, ylim/2], cmap='plasma', vmax=maxF, vmin=0, zorder=1)
+    circles2 = [Circle((s.x_cent, s.y_cent), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phcMid.layers[0].shapes]
+    cirlcesArround2 = [Circle((0, 0), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phcMid.layers[0].shapes]
+    for c, ca in zip(circles2, cirlcesArround2):
+        ax2.add_patch(c)
+        ca.center = (c.center[0]-np.sign(c.center[0]), c.center[1])
+        ax2.add_patch(ca)
+    ax2.set_xlim(-.5, .5)
+    ax2.set_ylim(x_min, x_max)
+    ax2.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False, 
+                   labelbottom=False, labelleft=False)
+    
+    # Plot original field on right subplot (vertical orientation)
+    cax3 = ax3.imshow(eabsOG, extent=[-.5, .5, -ylim/2, ylim/2], cmap='plasma', vmax=maxF, vmin=0, zorder=1)
+    circles3 = [Circle((s.x_cent, s.y_cent), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phcOG.layers[0].shapes]
+    cirlcesArround3 = [Circle((0, 0), s.r, edgecolor='white', facecolor='none', linewidth=3, zorder=2) for s in phcOG.layers[0].shapes]
+    for c, ca in zip(circles3, cirlcesArround3):
+        ax3.add_patch(c)
+        ca.center = (c.center[0]-np.sign(c.center[0]), c.center[1])
+        ax3.add_patch(ca)
+    ax3.set_xlim(-.5, .5)
+    ax3.set_ylim(x_min, x_max)
+    ax3.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False, 
+                   labelbottom=False, labelleft=False)
+    
+    # Hyperparameters to control box positioning and appearance
+    box_margin = 0.02      # Margin between subplot and box edge
+    box_linewidth = 3      # Line width of the boxes
+    box_colors = [ibm_colors['purple'], ibm_colors['blue'], ibm_colors['orange']]  # Colors for each subplot box
+    
+    # Calculate box positions based on subplot layout
+    subplot_width = 0.2   # Width of each subplot (adjust if needed)
+    subplot_spacing = 0.0725 # Spacing between subplots
+    box_height = 0.77       # Height of boxes
+    box_y_offset = 0.11    # Vertical offset from bottom
+    
+    # Calculate x positions for each box
+    box_x_positions = [
+        0.14,                                    # Left subplot
+        0.14 + subplot_width + subplot_spacing,  # Center subplot  
+        0.14 + 2*(subplot_width + subplot_spacing)  # Right subplot
+    ]
+    
+    # Add boxes around each subplot using calculated coordinates
+    for i, (x_pos, color) in enumerate(zip(box_x_positions, box_colors)):
+        fig.add_artist(plt.Rectangle((x_pos - box_margin, box_y_offset - box_margin), 
+                                   subplot_width + 2*box_margin, box_height + 2*box_margin,
+                                   facecolor='none', edgecolor=color, 
+                                   linewidth=box_linewidth, zorder=10))
+    
+    # Add a horizontal colorbar at the bottom
+    cbar_ax = fig.add_axes([0.115, 0.05, 0.8, 0.03])  # Position for horizontal colorbar at bottom
+    cbar = fig.colorbar(cax1, cax=cbar_ax, orientation='horizontal')
+    cbar.set_label(r"$|\mathbf{e}_{\tilde k=0.33}|$ [a$^{-\frac{3}{2}}$]", fontsize=COLORBAR_LABEL_SIZE)
+    cbar.ax.tick_params(labelsize=COLORBAR_TICK_SIZE)
+    # Set specific tick locations - you can modify these values
+    cbar.set_ticks([0, .25, .5])
+    # Format the tick labels to show 0 instead of 0.0 while keeping other decimals
+    cbar.ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: '0' if x == 0 else f'{x:.2f}'))
+
+    plt.show()
+
+#filedPlots(phcZIWOG,phcZIWmid,phcZIW,gmeZIWOG,gmeZIWmid,gmeZIW,out[-1])
+filedPlots(phcW1OG,phcW1mid,phcW1,gmeW1OG,gmeW1mid,gmeW1,out[-1])
 # %%
-plt.plot(gmeZIWMin.freqs)
-plt.show()
-plt.plot(gmeZIWMax.freqs)
-plt.show()
+## Mode volume calculation
+
+def modeVolume(gme,phc,ngs,k):
+    eps = np.real(legume.viz.eps_xy(phc,Nx=20,Ny=600,plot=False))
+    f,_,_ = gme.get_field_xy('E',k,20,phc.layers[0].d/2,Nx=20,Ny=600,component='xyz')
+    eabs = np.abs(np.conj(f['x'])*f['x'] + np.conj(f['y'])*f['y'] + np.conj(f['z'])*f['z'])
+    v = (1/np.max(eps*eabs))*(266E-9)**3
+    print("mode volume micro meters cubed: ",v/(1E-6)**3)
+
+    wavelength = 266E-9/gme.freqs[k,20]
+    print("mode volume wavelength of index: ",v/(wavelength/np.sqrt(12))**3)
+
+    #purcell enhancement calculation
+    purcell = eabs*3*np.pi*(299792458)**2*266E-9*np.abs(ngs[k])/(gme.freqs[k,20]*2*np.pi*299792458/266E-9)**2/np.sqrt(12)/(266E-9)**3
+    print("purcell enhancement: ",np.max(purcell))
+
+print("W1 Og")
+modeVolume(gmeW1OG,phcW1OG,ngW1OG,50)
+print("W1 Final")
+modeVolume(gmeW1,phcW1,ngW1,50)
+print("ZIW Og")
+modeVolume(gmeZIWOG,phcZIWOG,ngZIWOG,50)
+print("ZIW Final")
+modeVolume(gmeZIW,phcZIW,ngZIW,50)
 # %%
-legume.viz.eps_xy()
+print(ngW1OG[50])
+print(ngW1[50])
+print(ngZIWOG[50])
+print(ngZIW[50])
+
+# %%
+print((np.log10(e^alphasW1OG[50]/10)/np.log10(alphasW1[50]/10)))
+print(alphasW1[50])
+print(alphasZIWOG[50]/alphasZIW[50])
+print(alphasZIW[50])
+# %%
+print(np.log10(np.exp(-alphasW1OG[50]*ngW1OG[50]**2/266E-7))/np.log10(np.exp(-alphasW1[50]*ngW1[50]**2/266E-7)))
+# %%
+print(10**np.log10(alphasW1OG[50])/10**np.log10(alphasW1[50]))
+# %%
+print(alphasW1OG[50]/alphasW1[50])
 # %%
