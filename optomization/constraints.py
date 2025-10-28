@@ -238,22 +238,22 @@ class ConstraintManager(object):
         below = bandwidth/2-freq+gme.freqs[1,self.defaultArgs['mode']-1]
 
         # Append the frequency and ng values to the file as a list of dicts
-        data = []
-        if os.path.exists(path):
-            try:
-                with open(path, "r") as f:
-                    data = json.load(f)
-                    if not isinstance(data, list):
-                        data = [data]
-            except (json.JSONDecodeError, FileNotFoundError):
-                data = []
-        try:
-            entry = {'freq': freq._value, 'ng': ng._value}
-        except AttributeError:
-            entry = {'freq': float(freq), 'ng': float(ng)}
-        data.append(entry)
-        with open(path, "w") as f:
-            json.dump(data, f, indent=4)
+        # data = []
+        # if os.path.exists(path):
+        #     try:
+        #         with open(path, "r") as f:
+        #             data = json.load(f)
+        #             if not isinstance(data, list):
+        #                 data = [data]
+        #     except (json.JSONDecodeError, FileNotFoundError):
+        #         data = []
+        # try:
+        #     entry = {'freq': freq._value, 'ng': ng._value}
+        # except AttributeError:
+        #     entry = {'freq': float(freq), 'ng': float(ng)}
+        # data.append(entry)
+        # with open(path, "w") as f:
+        #     json.dump(data, f, indent=4)
 
         #combine constraints and return
         return(bd.hstack((freq,freq,ng,monotonic,above,below)))

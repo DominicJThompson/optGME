@@ -33,16 +33,16 @@ def worker_function(input):
                                             gmode_inds=[0,2,4],
                                             keep_feasible=input['feasible'])
     
-    manager.add_inside_unit_cell('Inside',.15)
-    manager.add_rad_bound('minimumRadius',.22,.4)
-    manager.add_min_dist('minDist',40/266,3)
+    #manager.add_inside_unit_cell('Inside',.15)
+    #manager.add_rad_bound('minimumRadius',.22,.4)
+    #manager.add_min_dist('minDist',40/266,3)
     manager.add_gme_constrs_complex('gme_constrs',minFreqHard=input['minfreqHard'],minFreqSoft=input['minfreqSoft'],maxFreq=.28,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
                                     bandwidth=.001,slope='down',minNG=input['ngs_target']*.9,maxNG=input['ngs_target']*1.1,path=input['pathc'])
 
 
     #run minimization
     tcParams = input['tcParams']
-    minim = optomization.TrustConstr(vars,optomization.W1,cost,mode=20,maxiter=1,gmeParams=gmeParams,constraints=manager,path=input['path'],**tcParams)
+    minim = optomization.TrustConstr(vars,optomization.W1,cost,mode=20,maxiter=3,gmeParams=gmeParams,constraints=manager,path=input['path'],**tcParams)
     minim.minimize()
     minim.save(input['path'])
 #%%
