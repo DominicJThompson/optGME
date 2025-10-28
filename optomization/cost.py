@@ -42,12 +42,13 @@ class Backscatter(Cost):
     Defines the cost function associate with backscattering
     """
 
-    def __init__(self, phidiv = 45, lp = 40, sig = 3, **kwargs):
+    def __init__(self, phidiv = 45, zdiv = 1, lp = 40, sig = 3, **kwargs):
         # Call the master class constructor
         super().__init__(**kwargs)
         self.phidiv = phidiv
         self.lp = lp
         self.sig = sig
+        self.zdiv = zdiv
 
 
     def hole_borders(self, phc):
@@ -84,52 +85,52 @@ class Backscatter(Cost):
 
         return(borders, phis, holeCords[:,2])
     
-    def get_xyfield(self,gme,n,xys,z,k,field='E',components='xyz'):
+    def get_xyfield(self,gme,phc,n,xys,k,field='E'):
         """
         returns the field around the holes
 
         Args:
             gme : the GuidedModeExp object
             n : the mode index
+            phc : the photonic crystal object
             xys : the coordinates of the points to get the field at, shape (:,:,2)
             z : the z-coordinate of the points to get the field at
             field : the field to get
             components : the components of the field to get
         """
 
-        #setup 
-        ft = {}
-        ft['x'],ft['y'],ft['z'] = gme.ft_field_xy(field,k,n,z)
-        fis = {}
-        _, ind_unique = npa.unique(gme.gvec,return_index=True,axis=1)
+        zSpace = npa.linspace(0,phc.layers[0].d,self.zdiv+1)
+        zs = (zSpace[1:]+zSpace[:-1])/2
 
-        #loop through adding the field
-        for comp in components:
-            if not (comp in fis.keys()):
-                fis[comp] = bd.zeros(xys[:,:,0].shape,dtype=bd.complex)
-                for indg in ind_unique:
-                    fis[comp] += npa.sqrt(npa.pi)*ft[comp][indg]*bd.exp(1j*gme.gvec[0,indg]*xys[:,:,0]+1j*gme.gvec[1,indg]*xys[:,:,1])
-            else:
-                raise ValueError("component can be any combiation of xyz")
+        FT = bd.stack(
+            [
+                bd.stack(gme.ft_field_xy(field, k, n, z), axis=0)
+                for z in zs
+            ],
+            axis=0)
 
+        phase = bd.exp(1j*bd.matmul(xys,gme.gvec))
+
+        fis = npa.einsum('ijk,abk->abij',phase,FT)
+        
         return(fis)
     
     
-    def comp_pdote(self,gme,phc,n,z,borders,phis,k):
+    def comp_pdote(self,gme,phc,n,borders,phis,k):
         """
         Computes the E and D dot products for the alpha calculation
         """
 
-        E = self.get_xyfield(gme,n,borders,z,k,components='xyz')
-        D = self.get_xyfield(gme,n,borders,z,k,field='D',components='xy')
+        E = self.get_xyfield(gme,phc,n,borders,k)
+        D = self.get_xyfield(gme,phc,n,borders,k,field='D')
 
-        Epara = bd.array([-bd.sin(phis)*E['x'],bd.cos(phis)*E['y'],E['z']])
-        Dperp = bd.array([bd.cos(phis)*D['x'],bd.sin(phis)*D['y'],npa.zeros_like(E['z'])])
+        Epara = bd.array([-bd.sin(phis)*E[:,0],bd.cos(phis)*E[:,1]])
+        Dperp = bd.array([bd.cos(phis)*D[:,0],bd.sin(phis)*D[:,1]])
 
         p = Epara+(phc.layers[0].eps_b+1)*Dperp/(2*phc.layers[0].eps_b*1)
 
-        pdeR = bd.conj(E['x'])*bd.conj(p[0])+bd.conj(E['y'])*bd.conj(p[1])+bd.conj(E['z'])*bd.conj(p[2])
-        pdeRP = E['x']*p[0]+E['y']*p[1]+E['z']*p[2]
+        pdeR = bd.conj(E[:,0])*bd.conj(p[0])+bd.conj(E[:,1])*bd.conj(p[1])
+        pdeRP = E[:,0]*p[0]+E[:,1]*p[1]
 
         return(pdeR,pdeRP)
     
@@ -138,36 +139,45 @@ class Backscatter(Cost):
         This runs the calculation of the backscattering divided by the group index
         Given the simulation results
         """
-        #get the points around the hole
+        # get the points around the hole
         borders, phis, holeRad = self.hole_borders(phc)
-        
-        #proccess phis so that they work with the formula
+
+        # process phis so that they work with the formula
         phisLooped = npa.arctan(npa.tan(phis))
-   
-        #get the necicary field information around the holes
-        pdeR, pdeRP = self.comp_pdote(gme,phc,n,phc.layers[0].d,borders,phis,k)
 
-        #do the multiplication for the p dot e part, we will add the jacobian determinate after
-        pdeMeshs = npa.array([[[pdeR[j] for _ in range(pdeR.shape[1])],npa.array([pdeRP[j] for _ in range(pdeR.shape[1])]).T ] for j in range(pdeR.shape[0])])
-        preSumPde = pdeMeshs[:,0]*pdeMeshs[:,1]
+        # get the necessary field information around the holes
+        pdeR, pdeRP = self.comp_pdote(gme, phc, n, borders, phis, k)
 
-        #the real exponential term
-        phiMesh, phiPMesh = npa.meshgrid(phisLooped,phisLooped)
-        realExp = (bd.abs(phiMesh-phiPMesh)*(-holeRad[:,npa.newaxis,npa.newaxis]))/(self.lp/self.a) #the unites cancle
+        # Efficiently compute p dot e cross products using broadcasting
+        # pdeR.shape = (Nholes, Nphis), pdeRP.shape = (Nholes, Nphis)
+        # Compute meshgrid for each hole at once
+        pdeR_ = pdeR[:,:, :, None]  # (zs, Nholes, Nphis, 1)
+        pdeRP_ = pdeRP[:, :, None, :]  # (zs, Nholes, 1, Nphis)
+        preSumPde = pdeR_ * pdeRP_  # (zs, Nholes, Nphis, Nphis)
 
-        #the imaginary exponential term
-        xMeshs = npa.array([[[borders[j,:,0] for _ in range(borders.shape[1])],npa.array([borders[j,:,0] for _ in range(borders.shape[1])]).T ] for j in range(borders.shape[0])])
-        imagExp = 2*(bd.norm(gme.kpoints[:,0]))*(xMeshs[:,0]-xMeshs[:,1]) #units cancle
+        # the real exponential term, using broadcasting
+        phiMesh = phisLooped[None, :, None]  # (1, Nphis, 1)
+        phiPMesh = phisLooped[None, None, :] # (1, 1, Nphis)
+        phiDiff = phiMesh - phiPMesh          # (1, Nphis, Nphis)
+        realExp = (npa.abs(phiDiff) * (-holeRad)[:, None, None]) / (self.lp / self.a)
 
-        #run the intigral, including the jacobian determinite
-        intigrand = preSumPde*bd.exp(realExp+1j*imagExp)
-        intigral = bd.sum(intigrand,axis=(1,2))*(holeRad*npa.pi*2/self.phidiv)**2
+        # the imaginary exponential term, using broadcasting
+        x = borders[:, :, 0]  # (Nholes, Nphis)
+        xMesh = x[:, :, None]     # (Nholes, Nphis, 1)
+        xPMesh = x[:, None, :]    # (Nholes, 1, Nphis)
+        kx = 2 * npa.linalg.norm(gme.kpoints[:, 0])
+        imagExp = kx * (xMesh - xPMesh)  # (Nholes, Nphis, Nphis)
 
-        #calculate the leading coeficnets for each of the holes
-        cirleCoeffs = ((299792458*2*npa.pi*gme.freqs[0,n])*(self.sig/self.a)*(phc.layers[0].eps_b-1)/2)**2
+        # run the integral, including the jacobian determinant
+        intigrand = preSumPde * npa.exp(realExp[None,:,:,:] + 1j * imagExp[None,:,:,:])
+        weights = (holeRad * npa.pi * 2 / self.phidiv) ** 2  # shape: (Nholes,)
+        intigral = npa.sum(intigrand, axis=(2, 3)) * weights
 
-        #compute the final result
-        alpha = bd.real(cirleCoeffs*bd.sum(intigral)*(phc.layers[0].d*self.a*10**-9)**2)
+        # calculate the leading coefficients for each of the holes
+        cirleCoeffs = ((299792458 * 2 * npa.pi * gme.freqs[0, n]) * (self.sig / self.a) * (phc.layers[0].eps_b - 1) / 2) ** 2
+
+        # compute the final result
+        alpha = npa.real(cirleCoeffs * npa.sum(intigral) * (phc.layers[0].d * self.a * 1e-9) ** 2 / self.zdiv)
         
         return(alpha*266*1E-9) #this puts it in units of a^-1
     
