@@ -180,7 +180,7 @@ class ConstraintManager(object):
                                                      np.array([minFreqHard,minFreqSoft,minNG,-np.inf,-np.inf,-np.inf]),
                                                      np.array([maxFreq,maxFreq,maxNG,0,0,0]),
                                                      jac=self._wrap_grad(jacobian(self._gme_constrs_complex),(ksBefore,ksAfter,bandwidth,slope,path)),
-                                                     keep_feasible=[True,False,False,False,False,False,False,False,False])
+                                                     keep_feasible=[True,False,False,False,False,False])
         self.constraintsDisc[name] = {
             'discription': """implements the folowing constraints: freq_bound, ng_bound, monotonic_band, bandwidth, and ng sign constraints on either side """,
             'args': {'minFreqHard': minFreqHard, 'minFreqSoft': minFreqSoft, 'maxFreq': maxFreq,'minNG': minNG, 'maxNG': maxNG,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
@@ -257,4 +257,4 @@ class ConstraintManager(object):
         #     json.dump(data, f, indent=4)
 
         #combine constraints and return
-        return(bd.hstack((freq,freq,ng,monotonic_out,above,below)))
+        return(bd.hstack((freq,freq,ng,monotonicOut,above,below)))

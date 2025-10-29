@@ -42,7 +42,6 @@ class Minimize(object):
         self.result = None
         self.time_iter = None #global time used for measuring time per iteration
         self.eigvecs = None
-        self.gme = legume.GuidedModeExp(self.crystal(vars=self.x0,**self.phcParams),self.gmax)
         
 
     def __str__(self):
@@ -64,9 +63,9 @@ class Minimize(object):
         defines the function that will be optomizaed over
         """
         phc = self.crystal(vars=vars,**self.phcParams)
-        self.gme.phc = phc
-        self.gme.run(**self.gmeParams)
-        out = self.cost.cost(self.gme,phc,self.mode)
+        gme = legume.GuidedModeExp(phc,self.gmax)
+        gme.run(**self.gmeParams)
+        out = self.cost.cost(gme,phc,self.mode)
         return(out)
     
     def scipy_objective(self,vars):
