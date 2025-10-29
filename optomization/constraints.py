@@ -177,8 +177,8 @@ class ConstraintManager(object):
 
 
         self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._gme_constrs_complex,(ksBefore,ksAfter,bandwidth,slope,path)),
-                                                     np.array([minFreqHard,minFreqSoft,minNG,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf,-np.inf]),
-                                                     np.array([maxFreq,maxFreq,maxNG,0,0,0,0,0,0]),
+                                                     np.array([minFreqHard,minFreqSoft,minNG,-np.inf,-np.inf,-np.inf]),
+                                                     np.array([maxFreq,maxFreq,maxNG,0,0,0]),
                                                      jac=self._wrap_grad(jacobian(self._gme_constrs_complex),(ksBefore,ksAfter,bandwidth,slope,path)),
                                                      keep_feasible=[True,False,False,False,False,False,False,False,False])
         self.constraintsDisc[name] = {
@@ -232,6 +232,7 @@ class ConstraintManager(object):
 
         #monotonic constraint
         monotonic = c*(gme.freqs[:-1,self.defaultArgs['mode']]-gme.freqs[1:,self.defaultArgs['mode']])
+        monotonicOut = bd.max(monotonic)
 
         #bandwidth constraint
         above = bandwidth/2+freq-gme.freqs[-1,self.defaultArgs['mode']+1]
@@ -256,4 +257,4 @@ class ConstraintManager(object):
         #     json.dump(data, f, indent=4)
 
         #combine constraints and return
-        return(bd.hstack((freq,freq,ng,monotonic,above,below)))
+        return(bd.hstack((freq,freq,ng,monotonic_out,above,below)))
