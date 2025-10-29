@@ -42,6 +42,7 @@ class Minimize(object):
         self.result = None
         self.time_iter = None #global time used for measuring time per iteration
         self.eigvecs = None
+        self.gme = legume.GuidedModeExp(self.crystal(vars=self.x0,**self.phcParams),self.gmax)
         
 
     def __str__(self):
@@ -63,9 +64,9 @@ class Minimize(object):
         defines the function that will be optomizaed over
         """
         phc = self.crystal(vars=vars,**self.phcParams)
-        gme = legume.GuidedModeExp(phc,self.gmax)
-        gme.run(**self.gmeParams)
-        out = self.cost.cost(gme,phc,self.mode)
+        self.gme.phc = phc
+        self.gme.run(**self.gmeParams)
+        out = self.cost.cost(self.gme,phc,self.mode)
         return(out)
     
     def scipy_objective(self,vars):
@@ -260,21 +261,6 @@ class TrustConstr(Minimize):
                 }
 
                 self.time_iter = time.time()
-
-                # # #correct the mode 
-                # phc = self.crystal(vars=xk,**self.phcParams)
-                # gme = legume.GuidedModeExp(phc,self.gmax)
-                # gme.run(**self.gmeParams)
-
-                # #we are going to add a correction to the mode number to account for frequency shifts
-                # if self.eigvecs is not None:
-                #     overlap = []
-                #     min_length = np.min([self.eigvecs.shape[0],gme.eigvecs[0].shape[0]])
-                #     self.eigvecs = self.eigvecs[:min_length]
-                #     for i in range(gme.eigvecs[0].shape[1]):
-                #         overlap.append(np.abs(np.dot(self.eigvecs,gme.eigvecs[0][:min_length,i])))
-                #     self.mode = int(np.argmax(overlap))
-                # self.eigvecs = gme.eigvecs[0][:,self.mode]
 
                 # Append the new iteration to the JSON file
                 data.append(iteration_data)
