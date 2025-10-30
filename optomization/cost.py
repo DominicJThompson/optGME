@@ -210,4 +210,4 @@ class dispersion(Cost):
         for i in range(len(gme.kpoints[0])):
             ng = npa.abs(NG(gme,i,n,Nx=self.Nx,Ny=self.Ny))
             cost += (ng - self.ng_target)**2
-        return(dispersion)
+        return(cost)
