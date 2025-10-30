@@ -1,7 +1,7 @@
 import legume.backend as bd
 import legume
 import autograd.numpy as npa
-from utils import NG
+from optomization.utils import NG
 
 class Cost(object):
     """
@@ -208,6 +208,6 @@ class dispersion(Cost):
         """
         cost = 0
         for i in range(len(gme.kpoints[0])):
-            ng = np.abs(NG(gme,i,n,Nx=self.Nx,Ny=self.Ny))
+            ng = npa.abs(NG(gme,i,n,Nx=self.Nx,Ny=self.Ny))
             cost += (ng - self.ng_target)**2
         return(dispersion)

@@ -212,7 +212,7 @@ class ConstraintManager(object):
                                                      keep_feasible=[False,False])
         self.constraintsDisc[name] = {
             'discription': """implements the folowing constraints: freq_bound, monotonic_band, bandwidth""",
-            'args': {'minFreq': minFreq 'maxFreq': maxFreq'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
+            'args': {'minFreq': minFreq, 'maxFreq': maxFreq,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
             'type': 'constraint'
         }
     

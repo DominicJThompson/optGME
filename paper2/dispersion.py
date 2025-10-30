@@ -37,7 +37,7 @@ def worker_function(input):
     manager.add_rad_bound('minimumRadius',.22,.4)
     manager.add_min_dist('minDist',40/455,3)
     manager.add_gme_constrs_dispersion('gme_constrs',minFreq=input['minfreq'],maxFreq=.305,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
-                                    bandwidth=.001,slope='down'path=input['pathc'])
+                                    bandwidth=.001,slope='down',path=input['pathc'])
 
 
     #run minimization
@@ -59,7 +59,7 @@ if __name__=='__main__':
         path = f"media/test{i}.json"
         pathc = f"media/test{i}_constr.json"
         input = {'path':path,'pathc':pathc,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
-                'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq}
+                'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455}
         minim = worker_function(input)  # Compute the result
 
 # %%
