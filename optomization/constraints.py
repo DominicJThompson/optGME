@@ -186,6 +186,35 @@ class ConstraintManager(object):
             'args': {'minFreqHard': minFreqHard, 'minFreqSoft': minFreqSoft, 'maxFreq': maxFreq,'minNG': minNG, 'maxNG': maxNG,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
             'type': 'constraint'
         }
+
+    def add_gme_constrs_dispersion(self,name,minFreq=0,maxFreq=100,ksBefore=[0],ksAfter=[np.pi],bandwidth=.01,slope='down',path="temp.json"):
+        """
+        implements the folowing constraints:
+        freq_bound,
+        monotonic_band,
+        bandwidth
+        In addition to adding ng sign constraints on the k points on either side
+
+        Args:
+            minFreq: minimum alowable frequency
+            maxFreq: maximum alowable frequency
+            ksBefore: a list of k values before the optomized kpoint
+            ksAfter: a list of k values after the optomized kpoint
+            bandwidth: The total bandwidth from the optomized mode, half on each side
+            slope: either 'up' or 'down' depending on the inital band
+        """
+
+
+        self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._gme_constrs_dispersion,(ksBefore,ksAfter,bandwidth,slope,path)),
+                                                     np.array([minFreq,-np.inf]),
+                                                     np.array([maxFreq,0]),
+                                                     jac=self._wrap_grad(jacobian(self._gme_constrs_dispersion),(ksBefore,ksAfter,bandwidth,slope,path)),
+                                                     keep_feasible=[False,False])
+        self.constraintsDisc[name] = {
+            'discription': """implements the folowing constraints: freq_bound, monotonic_band, bandwidth""",
+            'args': {'minFreq': minFreq 'maxFreq': maxFreq'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
+            'type': 'constraint'
+        }
     
     #----------functions that define default constraints----------
     
@@ -238,23 +267,40 @@ class ConstraintManager(object):
         above = bandwidth/2+freq-gme.freqs[-1,self.defaultArgs['mode']+1]
         below = bandwidth/2-freq+gme.freqs[1,self.defaultArgs['mode']-1]
 
-        # Append the frequency and ng values to the file as a list of dicts
-        # data = []
-        # if os.path.exists(path):
-        #     try:
-        #         with open(path, "r") as f:
-        #             data = json.load(f)
-        #             if not isinstance(data, list):
-        #                 data = [data]
-        #     except (json.JSONDecodeError, FileNotFoundError):
-        #         data = []
-        # try:
-        #     entry = {'freq': freq._value, 'ng': ng._value}
-        # except AttributeError:
-        #     entry = {'freq': float(freq), 'ng': float(ng)}
-        # data.append(entry)
-        # with open(path, "w") as f:
-        #     json.dump(data, f, indent=4)
-
         #combine constraints and return
         return(bd.hstack((freq,freq,ng,monotonicOut,above,below)))
+
+    def _gme_constrs_dispersion(self,x,ksBefore,ksAfter,bandwidth,slope,path):
+
+        #start by setting up GME and running it for all points 
+        phc = self.defaultArgs['crystal'](vars=x,**self.defaultArgs['phcParams'])
+        gme = legume.GuidedModeExp(phc,self.defaultArgs['gmax'])
+
+        #set up kpoints and run gme
+        gmeParams = self.defaultArgs['gmeParams'].copy()
+        kpointsBefore = bd.vstack((bd.array(ksBefore),bd.zeros(len(ksBefore))))
+        kpointsAfter = bd.vstack((bd.array(ksAfter),bd.zeros(len(ksAfter))))
+        kpoints = bd.hstack((kpointsBefore,gmeParams['kpoints'][0],gmeParams['kpoints'][-1],kpointsAfter))
+        gmeParams['kpoints'] = kpoints
+        gmeParams['gmode_inds'] = self.defaultArgs['gmode_inds']
+        gmeParams['numeig'] = self.defaultArgs['gmeParams']['numeig']+1
+        gme.run(**gmeParams)
+
+        #get adjustment for slope that will be used repeatedly
+        if slope=='up':
+            c = 1
+        elif slope=='down':
+            c = -1
+        else:
+            raise ValueError("slope within ng bound must be either 'up' or 'down'")
+
+        #get frequency bound constraint
+        freq_start = gme.freqs[len(ksBefore),self.defaultArgs['mode']]
+        freq_end = gme.freqs[len(ksBefore)+1,self.defaultArgs['mode']]
+
+        #monotonic constraint
+        monotonic = c*(gme.freqs[:-1,self.defaultArgs['mode']]-gme.freqs[1:,self.defaultArgs['mode']])
+        monotonicOut = bd.max(monotonic)
+
+        #combine constraints and return
+        return(bd.hstack((freq_end,monotonicOut)))
