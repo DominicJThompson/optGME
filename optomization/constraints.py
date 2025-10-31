@@ -304,7 +304,7 @@ class ConstraintManager(object):
 
         #bandwidth constraint
         above = bandwidth/2+freq_end-gme.freqs[-1,self.defaultArgs['mode']+1]
-        below = bandwidth/2-freq_end+gme.freqs[1,self.defaultArgs['mode']-1]
+        below = bandwidth/2-freq_end+gme.freqs[0,self.defaultArgs['mode']-1]
         bandwidthOut = bd.max(bd.hstack((above,below)))
 
         #combine constraints and return

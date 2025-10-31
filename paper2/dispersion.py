@@ -19,7 +19,7 @@ def worker_function(input):
 
     cost = optomization.dispersion(ng_target=input['ngs_target'])
 
-    gmeParams = {'verbose':False,'numeig':15,'compute_im':False,'gmode_inds':[0],'kpoints':np.vstack([input['ks_interest'],[0,0,0,0]])}
+    gmeParams = {'verbose':False,'numeig':15,'compute_im':False,'gmode_inds':[0],'kpoints':np.vstack([input['ks_interest'],[0]*len(input['ks_interest'])])}
     phcParams = {"Ny":7,"dslab":270/input['a'],"eps_slab":3.13}
     vars = optomization.W1Vars(key=input['key'])
     
