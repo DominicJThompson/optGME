@@ -36,7 +36,7 @@ def worker_function(input):
     manager.add_inside_unit_cell('Inside',.15)
     manager.add_rad_bound('minimumRadius',.22,.4)
     manager.add_min_dist('minDist',40/455,3)
-    manager.add_gme_constrs_dispersion('gme_constrs',minFreq=input['minfreq'],maxFreq=.305,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
+    manager.add_gme_constrs_dispersion('gme_constrs',minFreq=input['minfreq'],maxFreq=.31,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
                                     bandwidth=.001,slope='down',path=input['pathc'])
 
 
@@ -49,7 +49,7 @@ def worker_function(input):
 if __name__=='__main__':
     ks = list(np.linspace(npa.pi*.5,npa.pi,100))
 
-    ks_interest = [ks[29],ks[36],ks[44],ks[51]]
+    ks_interest = [ks[29],ks[34],ks[40],ks[46],ks[52],ks[58]]
     ngs_target = [10]
     ks_before = ks[15]
     ks_after = ks[90]
