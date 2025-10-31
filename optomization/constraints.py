@@ -303,9 +303,9 @@ class ConstraintManager(object):
         monotonicOut = bd.max(monotonic)
 
         #bandwidth constraint
-        above = bandwidth/2+freq_end-gme.freqs[-1,self.defaultArgs['mode']+1]
+        above = bandwidth/2+freq_start-gme.freqs[-1,self.defaultArgs['mode']+1]
         below = bandwidth/2-freq_end+gme.freqs[0,self.defaultArgs['mode']-1]
         bandwidthOut = bd.max(bd.hstack((above,below)))
 
         #combine constraints and return
-        return(bd.hstack((freq_end,monotonicOut,bandwidthOut)))
+        return(bd.hstack((freq_start,monotonicOut,bandwidthOut)))
