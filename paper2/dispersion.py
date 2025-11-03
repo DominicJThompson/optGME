@@ -42,7 +42,7 @@ def worker_function(input):
 
     #run minimization
     tcParams = input['tcParams']
-    minim = optomization.TrustConstr(vars,optomization.W1,cost,mode=14,maxiter=200,gmeParams=gmeParams,phcParams=phcParams,constraints=manager,path=input['path'],**tcParams)
+    minim = optomization.TrustConstr(vars,optomization.W1,cost,mode=14,maxiter=200,gmeParams=gmeParams,phcParams=phcParams,constraints=manager,path=input['path'],gmax=3.01,**tcParams)
     minim.minimize()
     minim.save(input['path'])
 #%%
