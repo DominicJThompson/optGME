@@ -37,7 +37,7 @@ def worker_function(input):
     manager.add_rad_bound('minimumRadius',.22,.4)
     manager.add_min_dist('minDist',40/455,3)
     manager.add_gme_constrs_dispersion('gme_constrs',minFreq=input['minfreq'],maxFreq=.315,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
-                                    bandwidth=.001,slope='down',path=input['pathc'])
+                                    bandwidth=.001,slope='down')
 
 
     #run minimization
