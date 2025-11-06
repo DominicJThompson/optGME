@@ -57,7 +57,7 @@ if __name__=='__main__':
     minfreq = .285
 
     for i in range(10):
-        path = f"media/ng20_tests/test{i}_20.json"
+        path = f"media/ng20_tests/test{i}_centered_20.json"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455}
         minim = worker_function(input)  # Compute the result
