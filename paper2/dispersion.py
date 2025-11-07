@@ -36,7 +36,7 @@ def worker_function(input):
     manager.add_inside_unit_cell('Inside',.15)
     manager.add_rad_bound('minimumRadius',.22,.4)
     manager.add_min_dist('minDist',40/455,3)
-    manager.add_gme_constrs_dispersion('gme_constrs',minFreq=input['minfreq'],maxFreq=.34,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
+    manager.add_gme_constrs_dispersion('gme_constrs',minFreq=input['minfreq'],maxFreq=.33,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
                                     bandwidth=.001,slope='down')
 
 
@@ -50,14 +50,14 @@ if __name__=='__main__':
     ks = list(np.linspace(npa.pi*.5,npa.pi,100))
 
     #first run the ng=20 test
-    ks_interest = [ks[36],ks[43],ks[51],ks[58],ks[66],ks[73],ks[81],ks[89]]
-    ngs_target = [20]
+    ks_interest = [ks[32],ks[40],ks[48],ks[57],ks[65],ks[74],ks[82],ks[91]]
+    ngs_target = [28]
     ks_before = ks[20]
     ks_after = ks[95]
-    minfreq = .285
+    minfreq = .26
 
     for i in range(10):
-        path = f"media/ng20_tests/test{i}_centered_20.json"
+        path = f"media/NDBP_05/test{i}.json"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455}
         minim = worker_function(input)  # Compute the result
