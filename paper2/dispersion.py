@@ -56,8 +56,8 @@ if __name__=='__main__':
     ks_after = ks[95]
     minfreq = .26
 
-    for i in range(10):
-        path = f"media/NDBP_05/test{i}.json"
+    for i in range(50):
+        path = f"media/NDBP_05/test{i}_ng28.json"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455}
         minim = worker_function(input)  # Compute the result
