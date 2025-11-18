@@ -47,15 +47,16 @@ def worker_function(input):
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
-                                    path=os.path.join(os.path.dirname(input['path']),'raw_data.json'),
+                                    path=input['path']+'/raw_data.json',
                                     gmax=3.01,
                                     **tcParams)
     minim.minimize()
-    minim.save(input['path'])
+    minim.save(input['path']+'/raw_data.json')
 
     optomization.dispLossPlot(np.array(minim.result["x"]),
-                                optomization.W1,input['ks_interest'],
-                                os.path.join(os.path.dirname(input['path']),'meta_data.png'),
+                                optomization.W1,
+                                input['ks_interest'],
+                                input['path']+'/meta_data.png',
                                 gmax=4.01,
                                 phcParams=phcParams,
                                 mode=14,
@@ -72,7 +73,7 @@ if __name__=='__main__':
     ks_after = ks[95]
     minfreq = .26
 
-    for i in range(50):
+    for i in range(5):
         path = f"media/save_tests/test{i}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455}
