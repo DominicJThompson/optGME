@@ -13,9 +13,7 @@ import optomization
 #%%
 def worker_function(input):
 
-    #make directory to save files
-    with open(input['path'], "w") as f:
-        pass
+    os.makedirs(input['path'], exist_ok=True)
 
     cost = optomization.dispersion(ng_target=input['ngs_target'])
 
@@ -42,9 +40,27 @@ def worker_function(input):
 
     #run minimization
     tcParams = input['tcParams']
-    minim = optomization.TrustConstr(vars,optomization.W1,cost,mode=14,maxiter=200,gmeParams=gmeParams,phcParams=phcParams,constraints=manager,path=input['path'],gmax=3.01,**tcParams)
+    minim = optomization.TrustConstr(vars,
+                                    optomization.W1,cost,
+                                    mode=14,
+                                    maxiter=200,
+                                    gmeParams=gmeParams,
+                                    phcParams=phcParams,
+                                    constraints=manager,
+                                    path=os.path.join(os.path.dirname(input['path']),'raw_data.json'),
+                                    gmax=3.01,
+                                    **tcParams)
     minim.minimize()
     minim.save(input['path'])
+
+    optomization.dispLossPlot(np.array(minim.result["x"]),
+                                optomization.W1,input['ks_interest'],
+                                os.path.join(os.path.dirname(input['path']),'meta_data.png'),
+                                gmax=4.01,
+                                phcParams=phcParams,
+                                mode=14,
+                                a=input['a'],
+                                final_cost=float(minim.result['fun']))
 #%%
 if __name__=='__main__':
     ks = list(np.linspace(npa.pi*.5,npa.pi,100))
@@ -57,7 +73,7 @@ if __name__=='__main__':
     minfreq = .26
 
     for i in range(50):
-        path = f"media/NDBP_05/test{i}_ng28.json"
+        path = f"media/save_tests/test{i}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455}
         minim = worker_function(input)  # Compute the result
