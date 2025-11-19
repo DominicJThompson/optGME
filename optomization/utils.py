@@ -44,7 +44,7 @@ def NG(gme,kind,mode,height=None,Nx=100,Ny=125):
     ng = -1/(bd.sum(bd.real(bd.cross(bd.conj(Efield),Hfield,axis=0)))*gme.phc.lattice.a2[1]/Nx/Ny*gme.phc.layers[0].d)
     return(ng)
 
-def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,final_cost=1e9):
+def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,final_cost=1e9,execution_time=0,niter=0):
     """
         Saves a figure with key information including the ng, dispersion, loss, and loss/ng^2
 
@@ -301,6 +301,8 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
         'max_loss_ng2':float(max_loss_ng2),
         'vars':vars.tolist(),
         'cost':final_cost,
+        'time':float(execution_time),
+        'itterations':int(niter)
     }
 
     with open(path.replace('.png','.json'), 'w') as f:

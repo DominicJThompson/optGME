@@ -61,7 +61,9 @@ def worker_function(input):
                                 phcParams=phcParams,
                                 mode=14,
                                 a=input['a'],
-                                final_cost=float(minim.result['fun']))
+                                final_cost=float(minim.result['fun']),
+                                execution_time=minim.result['execution_time'],
+                                niter=minim.result['niter'])
 #%%
 if __name__=='__main__':
     np.random.seed(42)
