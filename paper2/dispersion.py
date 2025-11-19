@@ -43,7 +43,7 @@ def worker_function(input):
     minim = optomization.TrustConstr(vars,
                                     optomization.W1,cost,
                                     mode=14,
-                                    maxiter=200,
+                                    maxiter=350,
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
@@ -64,6 +64,8 @@ def worker_function(input):
                                 final_cost=float(minim.result['fun']))
 #%%
 if __name__=='__main__':
+    np.random.seed(42)
+    npa.random.seed(42)
     ks = list(np.linspace(npa.pi*.5,npa.pi,100))
 
     #first run the ng=20 test
@@ -73,12 +75,12 @@ if __name__=='__main__':
     ks_after = ks[95]
     minfreq = .26
 
-    for i in range(5):
+    for i in range(3):
         path = f"media/save_tests/test{i}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455}
         minim = worker_function(input)  # Compute the result
     
-
+    optomization.runBatchReport(28,0,8,'media/save_tests','media/save_tests/report.html')
 
 # %%

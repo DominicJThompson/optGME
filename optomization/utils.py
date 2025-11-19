@@ -2,11 +2,16 @@ import numpy as np
 import legume
 from legume import backend as bd
 import json
+import base64
+import os
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Circle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import matplotlib.cm as cm
+import matplotlib.ticker as mticker
+
 
 
 def NG(gme,kind,mode,height=None,Nx=100,Ny=125):
@@ -300,3 +305,200 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
 
     with open(path.replace('.png','.json'), 'w') as f:
         json.dump(save_dict, f, indent=4)
+
+
+# =========================================================
+# Utility: encode PNG file to Base64
+# =========================================================
+def encode_image(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='report.html'):
+    # =========================================================
+    # (1) --- Figures and Parameters ---
+    # Generate images and parameters from the batch
+    # =========================================================
+
+    all_meta = {}   # final output dictionary
+    for test_name in os.listdir(path_to_batch):
+        test_path = os.path.join(path_to_batch, test_name)
+
+        # Only look at directories (test0, test1, ...)
+        if not os.path.isdir(test_path):
+            continue
+
+        meta_path = os.path.join(test_path, "meta_data.json")
+
+        if os.path.exists(meta_path):
+            with open(meta_path, "r") as f:
+                meta = json.load(f)
+
+            all_meta[test_name] = meta
+
+    #pull out the parameters from the data
+    mean_ngs,nbws,max_loss_ng2s,max_disps,costs = [],[],[],[],[]
+    for i,data in enumerate(all_meta.values()):
+        mean_ngs.append(data['mean_ng'])
+        nbws.append(data['Nbw'])
+        max_loss_ng2s.append(data['max_loss_ng2'])
+        max_disps.append(data['max_disp'])
+        costs.append(data['cost'])  
+
+    #set up the second figure
+    fig,ax = plt.subplots(2,2,figsize=(7,5))
+    cost_colors = np.sqrt(np.array(costs)/num_kpoints)
+    norm = plt.Normalize(cost_colors.min(), cost_colors.max())
+    cmap = cm.viridis
+
+    # Find the index of the minimum cost_colors point
+    min_idx = np.argmin(cost_colors)
+
+    # Use scatter to color by cost
+    sc0 = ax[0,0].scatter(range(len(cost_colors)), cost_colors, c=cost_colors, cmap=cmap, norm=norm)
+    ax[0,0].set_xlabel('Test Number')
+    ax[0,0].set_ylabel(r'Average $n_g$ Off')
+    # Make the minimum point red
+    ax[0,0].scatter(min_idx, cost_colors[min_idx], color='red', s=75, zorder=10)
+
+    sc1 = ax[1,0].scatter(mean_ngs, nbws, c=cost_colors, cmap=cmap, norm=norm)
+    ax[1,0].set_xlabel(r'mean $n_g$')
+    ax[1,0].set_ylabel('Nbw')
+    ax[1,0].scatter(mean_ngs[min_idx], nbws[min_idx], color='red', s=100, zorder=10)
+
+    sc2 = ax[1,1].scatter(max_loss_ng2s, max_disps, c=cost_colors, cmap=cmap, norm=norm)
+    ax[1,1].set_xlabel('Max Loss / $n_g^2$')
+    ax[1,1].set_ylabel('Max Loss')
+    ax[1,1].yaxis.set_major_formatter(mticker.ScalarFormatter(useMathText=True))
+    ax[1,1].ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+    ax[1,1].scatter(max_loss_ng2s[min_idx], max_disps[min_idx], color='red', s=100, zorder=10)
+
+    ax[0,1].axis('off')
+
+    plt.tight_layout()
+    plt.savefig('tmp.png')
+    plt.close(fig)
+
+    #encode the image
+    img_plot2_64    = encode_image(os.path.join(path_to_batch, f'test{min_idx}', 'meta_data.png'))
+    img_summary_64  = encode_image('tmp.png')
+    os.remove('tmp.png')
+
+    #set up last parameters
+    min_cost = costs[min_idx]
+        
+    # =========================================================
+    # (2) --- HTML Template ---
+    # Uses Python .format() substitutions
+    # =========================================================
+
+    html_template = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <title>Test Report</title>
+
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f9f9f9;
+        }}
+
+        h1 {{
+            margin-bottom: 10px;
+        }}
+
+        table {{
+            border-collapse: collapse;
+            margin-bottom: 40px;
+            width: 100%;
+            background: white;
+        }}
+
+        th, td {{
+            border: 1px solid #ccc;
+            padding: 10px 14px;
+            text-align: left;
+        }}
+
+        th {{
+            background: #eee;
+            font-weight: bold;
+        }}
+
+        .section {{
+            margin-bottom: 50px;
+            padding: 20px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }}
+
+        .plot {{
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }}
+    </style>
+    </head>
+
+    <body>
+
+    <h1>Batch Report</h1>
+
+    <table>
+        <tr>
+            <th>Target ng</th>
+            <th>Target loss</th>
+            <th>Num Kpoints</th>
+            <th>Min Cost</th>
+        </tr>
+
+        <tr>
+            <td>{target_ng}</td>
+            <td>{target_loss}</td>
+            <td>{num_kpoints}</td>
+            <td>{min_cost}</td>
+        </tr>
+    </table>
+
+    <div class="section">
+        <h2>Best Result Summary</h2>
+        <div class="plot">
+            <img width="600" src="data:image/png;base64,{img2}">
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>All Optimization Results</h2>
+        <div class="plot">
+            <img width="600" src="data:image/png;base64,{img1}">
+        </div>
+    </div>
+
+    </body>
+    </html>
+    """
+
+
+    # =========================================================
+    # (3) --- Fill Template ---
+    # =========================================================
+
+    html_filled = html_template.format(
+        target_ng       = round(target_ng,1),
+        target_loss     = round(target_loss,3),
+        num_kpoints     = num_kpoints,
+        min_cost        = round(min_cost,3),
+        img1            = img_summary_64,
+        img2            = img_plot2_64,
+    )
+
+
+    # =========================================================
+    # (4) --- Write to File ---
+    # =========================================================
+
+    with open(output_path, "w") as f:
+        f.write(html_filled)
