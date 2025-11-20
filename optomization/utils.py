@@ -317,6 +317,7 @@ def encode_image(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='report.html'):
+    def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='report.html'):
     # =========================================================
     # (1) --- Figures and Parameters ---
     # Generate images and parameters from the batch
@@ -339,13 +340,16 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
             all_meta[test_name] = meta
 
     #pull out the parameters from the data
-    mean_ngs,nbws,max_loss_ng2s,max_disps,costs = [],[],[],[],[]
+    mean_ngs,nbws,max_losses,max_loss_ng2s,max_disps,costs,execution_times,niters = [],[],[],[],[],[],[],[]
     for i,data in enumerate(all_meta.values()):
         mean_ngs.append(data['mean_ng'])
         nbws.append(data['Nbw'])
+        max_losses.append(data['max_loss'])    
         max_loss_ng2s.append(data['max_loss_ng2'])
         max_disps.append(data['max_disp'])
-        costs.append(data['cost'])  
+        costs.append(data['cost']) 
+        execution_times.append(data['time']) 
+        niters.append(data['itterations']) 
 
     #set up the second figure
     fig,ax = plt.subplots(2,2,figsize=(7,5))
@@ -363,6 +367,12 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
     # Make the minimum point red
     ax[0,0].scatter(min_idx, cost_colors[min_idx], color='red', s=75, zorder=10)
 
+    sc1 = ax[0,1].scatter(niters, np.array(execution_times)/3600, c=cost_colors, cmap=cmap, norm=norm)
+    ax[0,1].set_xlabel('Number of Iterations')
+    ax[0,1].set_ylabel('Execution Time (hours)')
+    # Make the minimum point red
+    ax[0,1].scatter(niters[min_idx], execution_times[min_idx]/3600, color='red', s=75, zorder=10)
+
     sc1 = ax[1,0].scatter(mean_ngs, nbws, c=cost_colors, cmap=cmap, norm=norm)
     ax[1,0].set_xlabel(r'mean $n_g$')
     ax[1,0].set_ylabel('Nbw')
@@ -370,12 +380,16 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
 
     sc2 = ax[1,1].scatter(max_loss_ng2s, max_disps, c=cost_colors, cmap=cmap, norm=norm)
     ax[1,1].set_xlabel('Max Loss / $n_g^2$')
-    ax[1,1].set_ylabel('Max Loss')
+    ax[1,1].set_ylabel('Max Dispersion')
     ax[1,1].yaxis.set_major_formatter(mticker.ScalarFormatter(useMathText=True))
     ax[1,1].ticklabel_format(axis='y', style='sci', scilimits=(0,0))
     ax[1,1].scatter(max_loss_ng2s[min_idx], max_disps[min_idx], color='red', s=100, zorder=10)
 
-    ax[0,1].axis('off')
+    # Add colorbar to the side for the whole figure
+    divider = make_axes_locatable(ax[1,1])
+    cax = divider.append_axes("right", size="7%", pad=0.15)
+    cbar = fig.colorbar(sc2, cax=cax)
+    cbar.set_label(r"Average $n_g$ Off", rotation=270, labelpad=15)
 
     plt.tight_layout()
     plt.savefig('tmp.png')
@@ -455,6 +469,7 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
             <th>Target loss</th>
             <th>Num Kpoints</th>
             <th>Min Cost</th>
+            <th>Total Time (hours)</th>
         </tr>
 
         <tr>
@@ -462,6 +477,7 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
             <td>{target_loss}</td>
             <td>{num_kpoints}</td>
             <td>{min_cost}</td>
+            <td>{total_time}</td>
         </tr>
     </table>
 
@@ -493,6 +509,7 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
         target_loss     = round(target_loss,3),
         num_kpoints     = num_kpoints,
         min_cost        = round(min_cost,3),
+        total_time      = round(np.sum(execution_times)/3600,3),
         img1            = img_summary_64,
         img2            = img_plot2_64,
     )
@@ -504,3 +521,4 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
 
     with open(output_path, "w") as f:
         f.write(html_filled)
+
