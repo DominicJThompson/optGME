@@ -205,8 +205,6 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
         Returns:
             None
     """
-    #import backscatter from optomization to avoid circular import
-    from optomization import Backscatter
     text_scale = 0.85
 
     #find the k-points that we optimized for 
@@ -217,15 +215,14 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
     gmeParams = {'verbose':False,'numeig':mode+2,'compute_im':False,'kpoints':np.vstack((ks,[0]*len(ks)))}
     phc = crystal(vars,**phcParams)
     gme = legume.GuidedModeExp(phc,gmax)
-    gme.run(**gmeParams)
-    cost = Backscatter(a=a,zdiv=10)
+    gme.run(**gmeParams)    
 
     #run ng and loss
     ng = []
     loss = []
     for i in range(len(ks)):
         ng.append(np.abs(NG(gme,i,mode,Nx=100,Ny=125)))
-        loss.append(10**cost.cost(gme,phc,mode,k=i)/a/1E-7*10*np.log10(np.e)*ng[-1]**2)
+        loss.append(10**backscatterLog(gme,phc,mode,k=i,a=a,zdiv=10)/a/1E-7*10*np.log10(np.e)*ng[-1]**2)
     ng = np.array(ng)
     loss = np.array(loss)
     
