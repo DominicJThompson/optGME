@@ -16,38 +16,45 @@ import multiprocessing as mp
 #%%
 def worker_function(input):
 
-    #make directory to save files
-    with open(input['path'], "w") as f:
-        pass
+    os.makedirs(input['path'], exist_ok=True)
 
-    cost = optomization.Backscatter()
+    cost = optomization.dispersion(ng_target=input['ngs_target'])
 
-    gmeParams = {'verbose':False,'numeig':21,'compute_im':False,'gmode_inds':[0,2,4],'kpoints':np.vstack([input['ks_interest'],[0]])}
+    gmeParams = {'verbose':False,'numeig':15,'compute_im':False,'gmode_inds':[0],'kpoints':np.vstack([input['ks_interest'],[0]*len(input['ks_interest'])])}
+    phcParams = {"Ny":7,"dslab":270/input['a'],"eps_slab":3.13}
     vars = optomization.W1Vars(key=input['key'])
     
     #define constraints
     manager = optomization.ConstraintManager(x0=vars,
                                             numberHoles=3,
                                             crystal=optomization.W1,
-                                            phcParams={},
+                                            phcParams=phcParams,
                                             gmeParams=gmeParams,
                                             gmax=2.5,
-                                            mode=20,
-                                            gmode_inds=[0,2,4],
-                                            keep_feasible=input['feasible'])
+                                            mode=14,
+                                            gmode_inds=[0])
     
-    #manager.add_inside_unit_cell('Inside',.15)
-    #manager.add_rad_bound('minimumRadius',.22,.4)
-    #manager.add_min_dist('minDist',40/266,3)
-    manager.add_gme_constrs_complex('gme_constrs',minFreqHard=input['minfreqHard'],minFreqSoft=input['minfreqSoft'],maxFreq=.28,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
-                                    bandwidth=.001,slope='down',minNG=input['ngs_target']*.9,maxNG=input['ngs_target']*1.1,path=input['pathc'])
+    manager.add_inside_unit_cell('Inside',.15)
+    manager.add_rad_bound('minimumRadius',.22,.4)
+    manager.add_min_dist('minDist',40/455,3)
+    manager.add_gme_constrs_dispersion('gme_constrs',minFreq=input['minfreq'],maxFreq=.33,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
+                                    bandwidth=.001,slope='down')
 
 
     #run minimization
     tcParams = input['tcParams']
-    minim = optomization.TrustConstr(vars,optomization.W1,cost,mode=20,maxiter=2,gmeParams=gmeParams,constraints=manager,path=input['path']+'/raw_data.json',**tcParams)
+    minim = optomization.TrustConstr(vars,
+                                    optomization.W1,cost,
+                                    mode=14,
+                                    maxiter=1,
+                                    gmeParams=gmeParams,
+                                    phcParams=phcParams,
+                                    constraints=manager,
+                                    path=input['path']+'/raw_data.json',
+                                    gmax=3.01,
+                                    **tcParams)
     minim.minimize()
-    minim.save(input['path'])
+    minim.save(input['path']+'/raw_data.json')
 #%%
 
 # -------------------------------------------------
@@ -107,7 +114,7 @@ def run_cpu_scaling_tests():
     print(f"Detected {total_cpus} CPUs")
 
     # Try these core group sizes
-    cpu_group_sizes = [1, 2, 4, 8, 12]
+    cpu_group_sizes = [18]
     cpu_group_sizes = [n for n in cpu_group_sizes if n <= total_cpus]
 
     manager = mp.Manager()
@@ -123,6 +130,7 @@ def run_cpu_scaling_tests():
         core_cursor += cores_per_job
 
         path = f"media/cpu_scaling/test_scale_{cores_per_job}"
+        os.makedirs(path, exist_ok=True)
 
         input_data = dict(base_input)
         input_data.update({

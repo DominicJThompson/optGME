@@ -317,7 +317,6 @@ def encode_image(path):
         return base64.b64encode(f.read()).decode("utf-8")
 
 def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='report.html'):
-    def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='report.html'):
     # =========================================================
     # (1) --- Figures and Parameters ---
     # Generate images and parameters from the batch
