@@ -10,8 +10,10 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Circle
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 import matplotlib.cm as cm
 import matplotlib.ticker as mticker
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 

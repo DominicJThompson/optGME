@@ -44,7 +44,7 @@ def worker_function(input):
     minim = optomization.TrustConstr(vars,
                                     optomization.W1,cost,
                                     mode=14,
-                                    maxiter=350,
+                                    maxiter=100,
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
@@ -77,14 +77,14 @@ if __name__=='__main__':
     ks_before = ks[20]
     ks_after = ks[95]
     minfreq = .26
-    maxBackscatter = 2e-2
+    maxBackscatter = [2e-2,1.5e-2,1e-2]
 
-    for i in range(1):
+    for i in range(3):
         path = f"media/loss_tests/test{i}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
-                'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter}
+                'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[i]}
         minim = worker_function(input)  # Compute the result
     
-    optomization.runBatchReport(28,0,8,'media/ng28_tests','media/ng28_tests/report.html')
+    optomization.runBatchReport(28,0,8,'media/loss_tests','media/loss_tests/report.html')
 
 # %%

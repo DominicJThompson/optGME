@@ -240,7 +240,7 @@ class ConstraintManager(object):
                                                      np.array([minFreq,-np.inf,-np.inf,0]),
                                                      np.array([maxFreq,0,0,maxBackscatter]),
                                                      jac=self._wrap_grad(jacobian(self._gme_constrs_dispersion_backscatter),(ksBefore,ksAfter,bandwidth,slope,backscatterParams)),
-                                                     keep_feasible=[False,False,False])
+                                                     keep_feasible=[False,False,False,False])
         self.constraintsDisc[name] = {
             'discription': """implements the folowing constraints: freq_bound, monotonic_band, bandwidth""",
             'args': {'minFreq': minFreq, 'maxFreq': maxFreq,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
@@ -351,7 +351,7 @@ class ConstraintManager(object):
         gmeParams = self.defaultArgs['gmeParams'].copy()
         kpointsBefore = bd.vstack((bd.array(ksBefore),[0]))
         kpointsAfter = bd.vstack((bd.array(ksAfter),[0]))
-        kpoints = bd.hstack((kpointsBefore,gmeParams['kpoints'][:,0].reshape(2,1),gmeParams['kpoints'][:,-1].reshape(2,1),kpointsAfter))
+        kpoints = bd.hstack((kpointsBefore,gmeParams['kpoints'],kpointsAfter))
         gmeParams['kpoints'] = kpoints
         gmeParams['gmode_inds'] = self.defaultArgs['gmode_inds']
         gmeParams['numeig'] = self.defaultArgs['gmeParams']['numeig']+1
@@ -367,7 +367,7 @@ class ConstraintManager(object):
 
         #get frequency bound constraint
         freq_start = gme.freqs[1,self.defaultArgs['mode']]
-        freq_end = gme.freqs[2,self.defaultArgs['mode']]
+        freq_end = gme.freqs[len(kpoints[0])-2,self.defaultArgs['mode']]
 
         #monotonic constraint
         monotonic = c*(gme.freqs[:-1,self.defaultArgs['mode']]-gme.freqs[1:,self.defaultArgs['mode']])
@@ -380,8 +380,8 @@ class ConstraintManager(object):
 
         #backscatter constraint
         backscatters = []
-        for i in range(len(gme.kpoints[0])):
-            backscatters.append(10**backscatterLog(gme,phc,self.defaultArgs['mode'],k=len(ksBefore)+i,**backscatterParams)/backscatterParams['a']/1E-7*10*np.log10(np.e))
+        for i in range(len(gmeParams['kpoints'][0])-2):
+            backscatters.append(10**backscatterLog(gme,phc,self.defaultArgs['mode'],k=1+i,**backscatterParams)/backscatterParams['a']/1E-7*10*np.log10(np.e))
         backscatterOut = bd.max(backscatters)
 
         #combine constraints and return
