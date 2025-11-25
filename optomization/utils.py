@@ -429,6 +429,9 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
     plt.savefig(path, bbox_inches='tight',dpi=300)
     plt.close(fig)
 
+    # calculate the true cost. The l1 difference between the mean ng and the calculated ng
+    true_cost = np.sum(np.abs(ngp[kind[0]:kind[-1]+1] - mean_ng))/(kind[-1]-kind[0]+1)
+
     save_dict = {
         'ng':list(ng),
         'loss':list(loss),
@@ -443,6 +446,7 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
         'max_loss_ng2':float(max_loss_ng2),
         'vars':vars.tolist(),
         'cost':final_cost,
+        'true_cost':float(true_cost),
         'time':float(execution_time),
         'itterations':int(niter)
     }
@@ -479,10 +483,16 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
                 meta = json.load(f)
 
             all_meta[test_name] = meta
+    #sort the dictionary to keep an order
+    all_meta = dict(sorted(
+        all_meta.items(),
+        key=lambda item: int(item[0][4:])
+        ))
 
     #pull out the parameters from the data
-    mean_ngs,nbws,max_losses,max_loss_ng2s,max_disps,costs,execution_times,niters = [],[],[],[],[],[],[],[]
+    ngs,mean_ngs,nbws,max_losses,max_loss_ng2s,max_disps,costs,execution_times,niters,kinds = [],[],[],[],[],[],[],[],[],[]
     for i,data in enumerate(all_meta.values()):
+        ngs.append(data['ng'])
         mean_ngs.append(data['mean_ng'])
         nbws.append(data['Nbw'])
         max_losses.append(data['max_loss'])    
@@ -491,10 +501,17 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
         costs.append(data['cost']) 
         execution_times.append(data['time']) 
         niters.append(data['itterations']) 
+        kinds.append(data['kind'])
+
+    #find the true cost
+    ngs = np.array(ngs)
+    kinds = np.array(kinds)
+    mean_ngs = np.array(mean_ngs)
+    true_costs = np.sum(np.abs((ngs[:,kinds[0,0]:kinds[0,-1]+1]-mean_ngs[:,None])),axis=1)/(kinds[0,-1]-kinds[0,0]+1)
 
     #set up the second figure
     fig,ax = plt.subplots(2,2,figsize=(7,5))
-    cost_colors = np.sqrt(np.array(costs)/num_kpoints)
+    cost_colors = true_costs
     norm = plt.Normalize(cost_colors.min(), cost_colors.max())
     cmap = cm.viridis
 
@@ -519,6 +536,26 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
     ax[1,0].set_ylabel('Nbw')
     ax[1,0].scatter(mean_ngs[min_idx], nbws[min_idx], color='red', s=100, zorder=10)
 
+    # Add the lines of constant mean_ngs*nbws=0.2, 0.3, 0.4, 0.5 without affecting axis limits, and annotate each line with its value
+    x_min = min(mean_ngs) * 1.05
+    x_max = max(mean_ngs) * 1.02
+    x_vals = np.linspace(x_min, x_max, 300)
+    for const in [0.2, 0.3, 0.4, 0.5]:
+        y_vals = const / x_vals
+        # Plot the line
+        ax[1,0].plot(x_vals, y_vals, color='red', linestyle='--', linewidth=1, alpha=0.7, zorder=2, clip_on=False)
+        # Add a text label to the left of the line (at the largest x value), slightly offset to the left
+        idx = 0  # leftmost x value
+        ax[1,0].text(
+            x_vals[idx] - 0.03 * (max(mean_ngs)-min(mean_ngs)),   # small left offset
+            y_vals[idx],
+            f"{const:.1f}",
+            color='red',
+            fontsize=8,
+            verticalalignment='center',
+            horizontalalignment='right'
+        )
+
     sc2 = ax[1,1].scatter(max_loss_ng2s, max_disps, c=cost_colors, cmap=cmap, norm=norm)
     ax[1,1].set_xlabel('Max Loss / $n_g^2$')
     ax[1,1].set_ylabel('Max Dispersion')
@@ -536,13 +573,22 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
     plt.savefig('tmp.png')
     plt.close(fig)
 
-    #encode the image
+    #now find min loss and min dispersion index. The true cost must be less than 2.5 for consideration
+    masked_loss = np.where(true_costs > target_ng*0.1, np.inf, max_losses)
+    masked_disp = np.where(true_costs > target_ng*0.1, np.inf, max_disps)
+    min_loss_idx = np.argmin(masked_loss)
+    min_disp_idx = np.argmin(masked_disp)
+
+    #encode the images
     img_plot2_64    = encode_image(os.path.join(path_to_batch, f'test{min_idx}', 'meta_data.png'))
     img_summary_64  = encode_image('tmp.png')
     os.remove('tmp.png')
+    img_plot2_loss_64 = encode_image(os.path.join(path_to_batch, f'test{min_loss_idx}', 'meta_data.png'))
+    img_plot2_disp_64 = encode_image(os.path.join(path_to_batch, f'test{min_disp_idx}', 'meta_data.png'))
+    
 
     #set up last parameters
-    min_cost = costs[min_idx]
+    min_cost = np.min(costs)
         
     # =========================================================
     # (2) --- HTML Template ---
@@ -610,6 +656,7 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
             <th>Target loss</th>
             <th>Num Kpoints</th>
             <th>Min Cost</th>
+            <th>Min Ng Off</th>
             <th>Total Time (hours)</th>
         </tr>
 
@@ -618,21 +665,31 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
             <td>{target_loss}</td>
             <td>{num_kpoints}</td>
             <td>{min_cost}</td>
+            <td>{min_ng_off}</td>
             <td>{total_time}</td>
         </tr>
     </table>
 
     <div class="section">
-        <h2>Best Result Summary</h2>
+        <h2>All Optimization Results</h2>
         <div class="plot">
-            <img width="600" src="data:image/png;base64,{img2}">
+            <img width="600" src="data:image/png;base64,{img1}">
         </div>
     </div>
 
     <div class="section">
-        <h2>All Optimization Results</h2>
+        <h2>Best Result Summary</h2>
         <div class="plot">
-            <img width="600" src="data:image/png;base64,{img1}">
+            <p>Smallest Average ng Off. Test: {min_idx}</p>
+            <img width="800" src="data:image/png;base64,{img2}">
+        </div>
+        <div class="plot">
+            <p>Smallest Loss. Test: {min_loss_idx}</p>
+            <img width="800" src="data:image/png;base64,{img3}">
+        </div>
+        <div class="plot">
+            <p>Smallest Dispersion. Test: {min_disp_idx}</p>
+            <img width="800" src="data:image/png;base64,{img4}">
         </div>
     </div>
 
@@ -650,9 +707,15 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
         target_loss     = round(target_loss,3),
         num_kpoints     = num_kpoints,
         min_cost        = round(min_cost,3),
+        min_ng_off      = round(np.min(true_costs),3),
         total_time      = round(np.sum(execution_times)/3600,3),
+        min_idx         = min_idx,
+        min_loss_idx    = min_loss_idx,
+        min_disp_idx    = min_disp_idx,
         img1            = img_summary_64,
         img2            = img_plot2_64,
+        img3            = img_plot2_loss_64,
+        img4            = img_plot2_disp_64,
     )
 
 
