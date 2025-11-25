@@ -44,7 +44,7 @@ def worker_function(input):
     minim = optomization.TrustConstr(vars,
                                     optomization.W1,cost,
                                     mode=14,
-                                    maxiter=100,
+                                    maxiter=350,
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
@@ -77,7 +77,7 @@ if __name__=='__main__':
     ks_before = ks[20]
     ks_after = ks[95]
     minfreq = .26
-    maxBackscatter = [2e-2,1.5e-2,1e-2]
+    maxBackscatter = [1e-2]
 
     for i in range(3):
         path = f"media/loss_tests/test{i}"
