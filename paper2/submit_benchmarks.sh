@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CPUS_LIST=(4 8 12 16 20 24 28 32)
+CPUS_LIST=(1 2 3 4 5 6)
 
 for CPUS in "${CPUS_LIST[@]}"; do
     echo "Submitting job with $CPUS CPUs"

@@ -58,6 +58,7 @@ if __name__=='__main__':
     np.random.seed(42)
     npa.random.seed(42)
     ks = list(np.linspace(npa.pi*.5,npa.pi,100))
+    cpus = int(os.environ["CPUS"])
 
     #first run the ng=20 test
     ks_interest = [ks[32],ks[40],ks[48],ks[57],ks[65],ks[74],ks[82],ks[91]]
@@ -68,7 +69,7 @@ if __name__=='__main__':
     maxBackscatter = [1e-2]
 
     for i in range(1):
-        path = f"media/loss_tests/test{i}"
+        path = f"media/loss_tests/test{cpus}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[i]}
         minim = worker_function(input)  # Compute the result
