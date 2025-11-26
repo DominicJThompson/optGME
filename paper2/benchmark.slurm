@@ -23,6 +23,9 @@ export OPENBLAS_NUM_THREADS=$CPUS
 export NUMEXPR_NUM_THREADS=$CPUS
 
 # ---- Run and time, append to CSV ----
-/usr/bin/time -f "$CPUS,%e,%U,%S,%M" \
-    -o media/results.csv -a \
+TIME_CMD=$(command -v time)
+
+/usr/bin/env "$TIME_CMD" \
+    -f "$CPUS,%e,%U,%S,%M" \
+    -o "$SLURM_SUBMIT_DIR/media/results.csv" -a \
     python3 slurmruns.py
