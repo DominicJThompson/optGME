@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=cpu_scaling_test
-#SBATCH --mem=35G
-#SBATCH --time=01:00:00
+#SBATCH --mem=10G
+#SBATCH --time=12:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 
