@@ -24,5 +24,5 @@ export NUMEXPR_NUM_THREADS=$CPUS
 
 # ---- Run and time, append to CSV ----
 /usr/bin/time -f "$CPUS,%e,%U,%S,%M" \
-    -o results.csv -a \
+    -o media/results.csv -a \
     python3 slurmruns.py
