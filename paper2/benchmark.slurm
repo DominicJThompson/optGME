@@ -14,7 +14,7 @@ fi
 echo "Running with $CPUS CPUs on host $(hostname)"
 
 # ---- Activate your virtual environment ----
-source "$SLURM_SUBMIT_DIR/.venv/bin/activate"
+source "/global/home/hpc6129/optGME/.venv/bin/activate"
 
 # ---- Limit NumPy/SciPy threads ----
 export OMP_NUM_THREADS=$CPUS
