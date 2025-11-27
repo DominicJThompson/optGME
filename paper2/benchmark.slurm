@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ng28_lossLimit
 #SBATCH --mem=10G
-#SBATCH --time=14-00:00:00
+#SBATCH --time=13-23:59:59
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 
