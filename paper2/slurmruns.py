@@ -44,7 +44,7 @@ def worker_function(input):
     minim = optomization.TrustConstr(vars,
                                     optomization.W1,cost,
                                     mode=14,
-                                    maxiter=10,
+                                    maxiter=500,
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
@@ -53,12 +53,24 @@ def worker_function(input):
                                     **tcParams)
     minim.minimize()
     minim.save(input['path']+'/raw_data.json')
+
+    optomization.dispLossPlot(np.array(minim.result["x"]),
+                            optomization.W1,
+                            input['ks_interest'],
+                            input['path']+'/meta_data.png',
+                            gmax=4.01,
+                            phcParams=phcParams,
+                            mode=14,
+                            a=input['a'],
+                            final_cost=float(minim.result['fun']),
+                            execution_time=minim.result['execution_time'],
+                            niter=minim.result['niter'])
 #%%
 if __name__=='__main__':
     np.random.seed(42)
     npa.random.seed(42)
     ks = list(np.linspace(npa.pi*.5,npa.pi,100))
-    cpus = int(os.environ["CPUS"])
+    loss_index = int(os.environ["LOSS_INDEX"])
 
     #first run the ng=20 test
     ks_interest = [ks[32],ks[40],ks[48],ks[57],ks[65],ks[74],ks[82],ks[91]]
@@ -66,12 +78,14 @@ if __name__=='__main__':
     ks_before = ks[20]
     ks_after = ks[95]
     minfreq = .26
-    maxBackscatter = [1e-2]
+    maxBackscatter = [1e-3,2e-3,3e-3,4e-3,5e-3,6e-3,7e-3,8e-3,9e-3,1e-2,2e-2,3e-2,4e-2,5e-2,6e-2,7e-2,8e-2,9e-2,1e-1]
 
-    for i in range(1):
-        path = f"media/loss_tests/test{cpus}"
+    for i in range(10):
+        path = f"media/loss_tests{loss_index}/test{i}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
-                'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[i]}
+                'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target,'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[loss_index]}
         minim = worker_function(input)  # Compute the result
+
+    optomization.runBatchReport(28,maxBackscatter[loss_index],8,'media/loss_tests{loss_index}','media/loss_tests{loss_index}/report.html')
 
 # %%
