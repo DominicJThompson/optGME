@@ -30,6 +30,6 @@ export NUMEXPR_NUM_THREADS=1
 TIME_CMD=$(command -v time)
 
 /usr/bin/env "$TIME_CMD" \
-    -f "$LOSS_INDEX,%e,%U,%S,%M" \
+    -f "$LOSS_INDEX,$NGS_INDEX,%e,%U,%S,%M" \
     -o "$SLURM_SUBMIT_DIR/media/results.csv" -a \
     python3 slurmruns.py
