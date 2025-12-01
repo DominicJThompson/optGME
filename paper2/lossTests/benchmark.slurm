@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=ng28_lossLimit
+#SBATCH --job-name=NDBP_lossTest
 #SBATCH --mem=10G
 #SBATCH --time=13-23:50:00
 #SBATCH --output=logs/%x_%j.out
@@ -7,11 +7,15 @@
 
 # ---- Safety checks ----
 if [ -z "$LOSS_INDEX" ]; then
-    echo "ERROR: CPUS environment variable not set"
+    echo "ERROR: LOSS_INDEX environment variable not set"
     exit 1
 fi
 
-echo "Running the loss index $LOSS_INDEX on host $(hostname)"
+if [ -z "$NGS_INDEX" ]; then
+    echo "ERROR: NGS_INDEX environment variable not set"
+    exit 1
+fi
+echo "Running the loss index $LOSS_INDEX and NGS index $NGS_INDEX on host $(hostname)"
 
 # ---- Activate your virtual environment ----
 source "/global/home/hpc6129/optGME/.venv/bin/activate"
