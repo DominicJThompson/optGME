@@ -430,7 +430,7 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
     plt.close(fig)
 
     # calculate the true cost. The l1 difference between the mean ng and the calculated ng
-    true_cost = np.sum(np.abs(ng[kind[0]:kind[-1]+1] - mean_ng))/(kind[-1]-kind[0]+1)
+    true_cost = np.sum(np.abs(ng[kind[0]:kind[-1]+1] - ng_mean))/(kind[-1]-kind[0]+1)
 
     save_dict = {
         'ng':list(ng),

@@ -144,7 +144,9 @@ def runSims(xs,crystal,params):
     gmeParams['verbose']=True
     gmeParams['numeig']+=5
     gme = legume.GuidedModeExp(phc,gmax=params['gmax'])
+    print(gmeParams,params['gmax'])
     gme.run(**gmeParams)
+
 
     print('running alpha')
     cost = Backscatter(**params['cost'])
@@ -159,7 +161,7 @@ def runSims(xs,crystal,params):
         gmeAlphacalc = legume.GuidedModeExp(phc,gmax=params['gmax'])
         gmeAlphacalc.run(**gmeParams)
         alphas.append(10**cost.cost(gmeAlphacalc,phc,params['mode']))
-        ngs.append(np.abs(NG(gmeAlphacalc,0,params['mode'],Ny=400)))
+        ngs.append(np.abs(NG(gmeAlphacalc,0,params['mode'])))
     return(phc,gme,alphas,ngs)
 
 def runNoiseSweep(xs,crystal,params):
@@ -269,8 +271,8 @@ def plotBands(gme,ng,params,color='red',plotback=True,index=0):
     # Show plot
     plt.show()
 
-plotBands(gme,ng,out[-1],color='#EE7733',plotback=False,index=2)
-plotBands(gmeOG,ngOG,out[-1],color='#0077BB',plotback=False,index=3)
+#plotBands(gme,ng,out[-1],color='#EE7733',plotback=False,index=2)
+#plotBands(gmeOG,ngOG,out[-1],color='#0077BB',plotback=False,index=3)
 
 #plotBands(gmeW1,ngW1,out[-1],color='#EE7733',index=0)
 #plotBands(gmeW1OG,ngW1OG,out[-1],color='#0077BB',index=1)
@@ -464,6 +466,9 @@ def lossVng(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,crystal):
     plt.close('all')
     # Create figure with higher DPI
     plt.figure(dpi=STYLE['figure']['dpi'])
+
+    alphasOG = alphasOG*np.sqrt(np.pi)
+    alphas = alphas*np.sqrt(np.pi)
     
     # Extract parameters for cleaner code
     fs = STYLE['font_sizes']
@@ -706,17 +711,17 @@ lossVfreq(phc,gme,alphas,ng,phcOG,gmeOG,alphasOG,ngOG,'ZIW')
 #%%
 print(len(ngW1))
 #%%
-with open('/home/dominic/Desktop/optGME/optGME/tests/media/ginds3/ziwBest.json','r') as file:
+with open('/Users/dominic/Desktop/optGME/tests_old/media/ginds3/ziwBest.json','r') as file:
     out = json.load(file)
 
-phcZIWmid,gmeZIWmid,alphasZIWmid,ngZIWmid = runSims(np.array([out[6]['x_values']]),ZIW,out[-1])
+#phcZIWmid,gmeZIWmid,alphasZIWmid,ngZIWmid = runSims(np.array([out[6]['x_values']]),ZIW,out[-1])
 phcZIW,gmeZIW,alphasZIW,ngZIW = runSims(np.array(out[-1]['result']['x']),ZIW,out[-1])
 phcZIWOG,gmeZIWOG,alphasZIWOG,ngZIWOG = runSims(ZIWVars(),ZIW,out[-1]) 
 #%%
-with open('/home/dominic/Desktop/optGME/optGME/tests/media/ginds3/W1Best.json','r') as file:
+with open('/Users/dominic/Desktop/optGME/tests_old/media/ginds3/W1Best.json','r') as file:
     out = json.load(file)
 
-phcW1mid,gmeW1mid,alphasW1mid,ngW1mid = runSims(np.array([out[5]['x_values']]),W1,out[-1])
+#phcW1mid,gmeW1mid,alphasW1mid,ngW1mid = runSims(np.array([out[5]['x_values']]),W1,out[-1])
 phcW1,gmeW1,alphasW1,ngW1 = runSims(np.array(out[-1]['result']['x']),W1,out[-1])
 phcW1OG,gmeW1OG,alphasW1OG,ngW1OG = runSims(W1Vars(),W1,out[-1]) 
 #%%
