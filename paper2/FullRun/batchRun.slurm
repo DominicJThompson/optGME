@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=test_array
+#SBATCH --job-name=NDBP_FullRun
 #SBATCH --output=logs/out_%A_%a.txt
 #SBATCH --error=logs/err_%A_%a.txt
 #SBATCH --array=1-16            # 1650 jobs

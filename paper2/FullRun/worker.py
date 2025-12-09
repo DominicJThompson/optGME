@@ -31,7 +31,7 @@ def worker_function(input):
                                             gmeParams=gmeParams,
                                             gmax=3.5,
                                             mode=14,
-                                            gmode_inds=[0,2,4])
+                                            gmode_inds=[0])
     
     manager.add_inside_unit_cell('Inside',.2)
     manager.add_rad_bound('minimumRadius',.15,.4)
