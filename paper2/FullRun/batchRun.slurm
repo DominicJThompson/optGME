@@ -22,7 +22,7 @@ echo "CSV Line: $INPUT_LINE"
 
 # Parse CSV columns into variables
 # Works even if values contain text
-IFS=',' read -r LOSS_INDEX NGS_INDEX OTHER_PARAM <<< "$INPUT_LINE"
+IFS=',' read -r LOSS_INDEX NDBP_INDEX NG_INDEX SEED <<< "$INPUT_LINE"
 
 echo "LOSS_INDEX = $LOSS_INDEX"
 echo "NDBP_INDEX = $NDBP_INDEX"
