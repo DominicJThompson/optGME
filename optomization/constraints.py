@@ -349,8 +349,8 @@ class ConstraintManager(object):
 
         #set up kpoints and run gme
         gmeParams = self.defaultArgs['gmeParams'].copy()
-        kpointsBefore = bd.vstack((bd.array(ksBefore),[0]))
-        kpointsAfter = bd.vstack((bd.array(ksAfter),[0]))
+        kpointsBefore = bd.vstack((bd.array(ksBefore),len(ksBefore)*[0]))
+        kpointsAfter = bd.vstack((bd.array(ksAfter),len(ksAfter)*[0]))
         kpoints = bd.hstack((kpointsBefore,gmeParams['kpoints'],kpointsAfter))
         gmeParams['kpoints'] = kpoints
         gmeParams['gmode_inds'] = self.defaultArgs['gmode_inds']
@@ -366,8 +366,8 @@ class ConstraintManager(object):
             raise ValueError("slope within ng bound must be either 'up' or 'down'")
 
         #get frequency bound constraint
-        freq_start = gme.freqs[1,self.defaultArgs['mode']]
-        freq_end = gme.freqs[len(kpoints[0])-2,self.defaultArgs['mode']]
+        freq_start = gme.freqs[len(ksBefore),self.defaultArgs['mode']]
+        freq_end = gme.freqs[len(kpoints[0])-len(ksAfter)-1,self.defaultArgs['mode']]
 
         #monotonic constraint
         monotonic = c*(gme.freqs[:-1,self.defaultArgs['mode']]-gme.freqs[1:,self.defaultArgs['mode']])

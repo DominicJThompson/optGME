@@ -2,8 +2,8 @@
 #SBATCH --job-name=test_array
 #SBATCH --output=logs/out_%A_%a.txt
 #SBATCH --error=logs/err_%A_%a.txt
-#SBATCH --array=1-3            # 1650 jobs
-#SBATCH --time=01:00:00
+#SBATCH --array=1-16            # 1650 jobs
+#SBATCH --time=13-23:50:00
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=10G
 
@@ -23,6 +23,12 @@ echo "CSV Line: $INPUT_LINE"
 # Parse CSV columns into variables
 # Works even if values contain text
 IFS=',' read -r LOSS_INDEX NDBP_INDEX NG_INDEX SEED <<< "$INPUT_LINE"
+
+# ---- Limit NumPy/SciPy threads ----
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
 
 echo "LOSS_INDEX = $LOSS_INDEX"
 echo "NDBP_INDEX = $NDBP_INDEX"
