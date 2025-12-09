@@ -380,8 +380,8 @@ class ConstraintManager(object):
 
         #backscatter constraint
         backscatters = []
-        for i in range(len(gmeParams['kpoints'][0])-2):
-            backscatters.append(10**backscatterLog(gme,phc,self.defaultArgs['mode'],k=1+i,**backscatterParams)/backscatterParams['a']/1E-7*10*np.log10(np.e))
+        for i in range(len(gmeParams['kpoints'][0])-len(ksAfter)-1):
+            backscatters.append(10**backscatterLog(gme,phc,self.defaultArgs['mode'],k=len(ksBefore)+i,**backscatterParams)/backscatterParams['a']/1E-7*10*np.log10(np.e))
         backscatterOut = bd.max(backscatters)
 
         #combine constraints and return
