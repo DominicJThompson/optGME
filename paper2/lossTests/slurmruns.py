@@ -86,6 +86,6 @@ if __name__=='__main__':
                 'key':i,'ks_interest':ks_interest,'ngs_target':ngs_target[ngs_index],'ks_before':ks_before,'ks_after':ks_after,'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[loss_index]}
         minim = worker_function(input)  # Compute the result
 
-    optomization.runBatchReport(ngs_target[ngs_index],maxBackscatter[loss_index],8,f'media/ng{ngs_target[ngs_index]}/loss_tests{loss_index}',f'media/ng{ngs_target[ngs_index]}/loss_tests{loss_index}/report.html')
+    optomization.runBatchReport(ngs_target[ngs_index],maxBackscatter[loss_index],8,f'media/ng{ngs_target[ngs_index]}/loss_tests{loss_index}',f'media/ng{ngs_target[ngs_index]}/loss_tests{loss_index}/report')
 
 # %%

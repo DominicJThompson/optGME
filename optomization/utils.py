@@ -462,7 +462,7 @@ def encode_image(path):
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
-def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='report.html'):
+def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='report'):
     # =========================================================
     # (1) --- Figures and Parameters ---
     # Generate images and parameters from the batch
@@ -723,6 +723,31 @@ def runBatchReport(target_ng,target_loss,num_kpoints,path_to_batch,output_path='
     # (4) --- Write to File ---
     # =========================================================
 
-    with open(output_path, "w") as f:
+    with open(output_path+".html", "w") as f:
         f.write(html_filled)
+
+    # =========================================================
+    # (4) --- Write to json file ---
+    # =========================================================
+
+    output_dict = {
+        'target_ng':float(target_ng),
+        'target_loss':float(target_loss),
+        'num_kpoints':int(num_kpoints),
+        'min_cost':float(min_cost),
+        'min_ng_off':float(np.min(true_costs)),
+        'total_time':float(np.sum(execution_times)/3600),
+        'min_idx':int(min_idx),
+        'min_loss_idx':int(min_loss_idx),
+        'min_disp_idx':int(min_disp_idx),
+        'mean_ngs':mean_ngs.tolist(),
+        'nbws':nbws,
+        'max_losses':max_losses,
+        'max_loss_ng2s':max_loss_ng2s,
+        'max_disps':max_disps,
+        'true_costs':true_costs.tolist(),
+    }
+
+    with open(output_path+".json", "w") as f:
+        json.dump(output_dict, f, indent=4, sort_keys=True)
 
