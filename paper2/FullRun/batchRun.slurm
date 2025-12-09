@@ -15,7 +15,7 @@ CSV_FILE="arrayInputs.csv"
 
 # Extract the row corresponding to this array index.
 # NR==SLURM_ARRAY_TASK_ID+1 to skip header row.
-INPUT_LINE=$(awk -v idx="$SLURM_ARRAY_TASK_ID" 'NR==idx+1' inputs.csv)
+INPUT_LINE=$(awk -v idx="$SLURM_ARRAY_TASK_ID" 'NR==idx+1' $CSV_FILE)
 
 echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "CSV Line: $INPUT_LINE"
