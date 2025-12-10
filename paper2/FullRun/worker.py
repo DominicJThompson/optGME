@@ -45,7 +45,7 @@ def worker_function(input):
     minim = optomization.TrustConstr(vars,
                                     optomization.W1,cost,
                                     mode=14,
-                                    maxiter=50,
+                                    maxiter=500,
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
@@ -116,7 +116,7 @@ if __name__=='__main__':
         add = 10
     else:
         add = 0
-    for i in range(2):
+    for i in range(1):
         path = f"media/ng{ngs_target[ngs_index]}//ndbp{ndbp_index}/loss_tests{loss_index}/test{i+add}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest[ndbp_index],'ngs_target':ngs_target[ngs_index],'ks_before':ks_before[ndbp_index],'ks_after':ks_after[ndbp_index],'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[loss_index]}

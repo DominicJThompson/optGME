@@ -14,14 +14,12 @@ source "/global/home/hpc6129/optGME/.venv/bin/activate"
 CSV_FILE="arrayInputs.csv"
 
 # Extract the row corresponding to this array index.
-# NR==SLURM_ARRAY_TASK_ID+1 to skip header row.
 INPUT_LINE=$(awk -v idx="$SLURM_ARRAY_TASK_ID" 'NR==idx+1' $CSV_FILE)
 
 echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "CSV Line: $INPUT_LINE"
 
 # Parse CSV columns into variables
-# Works even if values contain text
 IFS=',' read -r LOSS_INDEX NDBP_INDEX NG_INDEX SEED <<< "$INPUT_LINE"
 
 # ---- Limit NumPy/SciPy threads ----
@@ -35,9 +33,19 @@ echo "NDBP_INDEX = $NDBP_INDEX"
 echo "NG_INDEX  = $NG_INDEX"
 echo "SEED = $SEED"
 
-# Run your code
+# ---- Run your code ----
 python worker.py \
     --LOSS_INDEX "$LOSS_INDEX" \
-    --NDBP_INDEX "$NDBP_INDEX"\
+    --NDBP_INDEX "$NDBP_INDEX" \
     --NG_INDEX "$NG_INDEX" \
     --SEED "$SEED"
+
+# ---- Log success or failure ----
+STATUS_FILE_SUCCESS="/global/home/hpc6129/optGME/optGME/paper2/FullRun/media/slurm_success.txt"
+STATUS_FILE_FAIL="/global/home/hpc6129/optGME/optGME/paper2/FullRun/media/slurm_fail.txt"
+
+if [ $? -eq 0 ]; then
+    echo "${SLURM_JOB_ID},${SLURM_ARRAY_TASK_ID},${LOSS_INDEX},${NDBP_INDEX},${NG_INDEX},${SEED}" >> "$STATUS_FILE_SUCCESS"
+else
+    echo "${SLURM_JOB_ID},${SLURM_ARRAY_TASK_ID},${LOSS_INDEX},${NDBP_INDEX},${NG_INDEX},${SEED}" >> "$STATUS_FILE_FAIL"
+fi
