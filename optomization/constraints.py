@@ -374,9 +374,11 @@ class ConstraintManager(object):
         monotonicOut = bd.max(monotonic)
 
         #bandwidth constraint
-        above = bandwidth/2+freq_start-gme.freqs[-1,self.defaultArgs['mode']+1]
-        below = bandwidth/2-freq_end+gme.freqs[0,self.defaultArgs['mode']-1]
-        bandwidthOut = bd.max(bd.hstack((above,below)))
+        above1 = bandwidth/2+freq_start-gme.freqs[-1,self.defaultArgs['mode']+1]
+        above2 = bandwidth/2+freq_start-gme.freqs[-2,self.defaultArgs['mode']+1]
+        below1 = bandwidth/2-freq_end+gme.freqs[0,self.defaultArgs['mode']-1]
+        below2 = bandwidth/2-freq_end+gme.freqs[1,self.defaultArgs['mode']-1]
+        bandwidthOut = bd.max(bd.hstack((above1,above2,below1,below2)))
 
         #backscatter constraint
         backscatters = []

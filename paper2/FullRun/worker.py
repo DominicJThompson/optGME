@@ -36,8 +36,8 @@ def worker_function(input):
     manager.add_inside_unit_cell('Inside',.2)
     manager.add_rad_bound('minimumRadius',.15,.4)
     manager.add_min_dist('minDist',40/455,3)
-    manager.add_gme_constrs_dispersion_backscatter('gme_constrs',minFreq=input['minfreq'],maxFreq=.33,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
-                                    bandwidth=.001,slope='down',maxBackscatter=input['maxBackscatter'],backscatterParams=backscatterParams)
+    manager.add_gme_constrs_dispersion_backscatter('gme_constrs',minFreq=input['minfreq'],maxFreq=.327,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
+                                    bandwidth=.0025,slope='down',maxBackscatter=input['maxBackscatter'],backscatterParams=backscatterParams)
 
 
     #run minimization
@@ -121,8 +121,6 @@ if __name__=='__main__':
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest[ndbp_index],'ngs_target':ngs_target[ngs_index],'ks_before':ks_before[ndbp_index],'ks_after':ks_after[ndbp_index],'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[loss_index]}
         minim = worker_function(input)  # Compute the result
-
-    optomization.runBatchReport(ngs_target[ngs_index],maxBackscatter[loss_index],8,f'media/ng{ngs_target[ngs_index]}/ndbp{ndbp_index}/loss_tests{loss_index}',f'media/ng{ngs_target[ngs_index]}/ndbp{ndbp_index}/loss_tests{loss_index}/report{seed}')
 
 # %%
 

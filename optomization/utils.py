@@ -210,7 +210,7 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
     text_scale = 0.85
 
     #find the k-points that we optimized for 
-    ks = np.linspace(np.pi*.5,np.pi,100)
+    ks = np.linspace(np.pi*.5,np.pi,200)
     kind = [int(np.argmin(np.abs(k-ks))) for k in kpoints]
 
     #run GME 
