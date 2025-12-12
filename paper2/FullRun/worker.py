@@ -37,7 +37,7 @@ def worker_function(input):
     manager.add_rad_bound('minimumRadius',.15,.4)
     manager.add_min_dist('minDist',40/455,3)
     manager.add_gme_constrs_dispersion_backscatter('gme_constrs',minFreq=input['minfreq'],maxFreq=.327,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
-                                    bandwidth=.0025,slope='down',maxBackscatter=input['maxBackscatter'],backscatterParams=backscatterParams)
+                                    bandwidth=.002,slope='down',maxBackscatter=input['maxBackscatter'],backscatterParams=backscatterParams)
 
 
     #run minimization
