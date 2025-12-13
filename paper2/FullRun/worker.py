@@ -113,10 +113,14 @@ if __name__=='__main__':
     maxBackscatter = [1e-3,2e-3,3e-3,4e-3,5e-3,6e-3,7e-3,8e-3,9e-3,1e-2,2e-2,3e-2,4e-2,5e-2]
 
     if seed == 42:
+        add = 5
+    elif seed == 67:
         add = 10
+    elif seed == 69:
+        add = 15
     else:
         add = 0
-    for i in range(1):
+    for i in range(5):
         path = f"media/ng{ngs_target[ngs_index]}//ndbp{ndbp_index}/loss_tests{loss_index}/test{i+add}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest[ndbp_index],'ngs_target':ngs_target[ngs_index],'ks_before':ks_before[ndbp_index],'ks_after':ks_after[ndbp_index],'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[loss_index]}

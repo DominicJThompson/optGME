@@ -2,7 +2,7 @@
 #SBATCH --job-name=NDBP_FullRun
 #SBATCH --output=logs/out_%A_%a.txt
 #SBATCH --error=logs/err_%A_%a.txt
-#SBATCH --array=1-1650            # 1650 jobs
+#SBATCH --array=1-3300            # 1650 jobs
 #SBATCH --time=13-23:50:00
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=10G
