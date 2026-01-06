@@ -2,7 +2,7 @@
 #SBATCH --job-name=NDBP_FullRun
 #SBATCH --output=logs/out_%A_%a.txt
 #SBATCH --error=logs/err_%A_%a.txt
-#SBATCH --array=1-1650            # 1650 jobs
+#SBATCH --array=1-166             # 166 jobs
 #SBATCH --time=13-23:50:00
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=10G
@@ -11,7 +11,7 @@
 source "/global/home/hpc6129/optGME/.venv/bin/activate"
 
 # Path to your CSV
-CSV_FILE="arrayInputs.csv"
+CSV_FILE="arrayInputs2.csv"
 
 # Extract the row corresponding to this array index.
 INPUT_LINE=$(awk -v idx="$SLURM_ARRAY_TASK_ID" 'NR==idx+1' $CSV_FILE)
