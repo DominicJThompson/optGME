@@ -112,7 +112,7 @@ if __name__=='__main__':
     minfreq = .26
     maxBackscatter = [1e-3,2e-3,3e-3,4e-3,5e-3,6e-3,7e-3,8e-3,9e-3,1e-2,2e-2,3e-2,4e-2,5e-2]
 
-    if seed == 42:
+    if seed == 420:
         add = 10
     else:
         add = 0
