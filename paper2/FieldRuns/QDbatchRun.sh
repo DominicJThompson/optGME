@@ -35,7 +35,7 @@ echo "NG_INDEX  = $NG_INDEX"
 echo "SEED = $SEED"
 
 # ---- Run your code ----
-python worker.py \
+python QDworker.py \
     --LOSS_INDEX "$LOSS_INDEX" \
     --FIELD_INDEX "$FIELD_INDEX" \
     --NDBP_INDEX "$NDBP_INDEX" \
