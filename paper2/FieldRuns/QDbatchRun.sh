@@ -11,7 +11,7 @@
 source "/global/home/hpc6129/optGME/.venv/bin/activate"
 
 # Path to your CSV
-CSV_FILE="arrayInputs2.csv"
+CSV_FILE="data/QD_arrayInputs.csv"
 
 # Extract the row corresponding to this array index.
 INPUT_LINE=$(awk -v idx="$SLURM_ARRAY_TASK_ID" 'NR==idx+1' $CSV_FILE)
@@ -20,7 +20,7 @@ echo "Array Task ID: $SLURM_ARRAY_TASK_ID"
 echo "CSV Line: $INPUT_LINE"
 
 # Parse CSV columns into variables
-IFS=',' read -r LOSS_INDEX NDBP_INDEX NG_INDEX SEED <<< "$INPUT_LINE"
+IFS=',' read -r LOSS_INDEX FIELD_INDEX NDBP_INDEX NG_INDEX SEED <<< "$INPUT_LINE"
 
 # ---- Limit NumPy/SciPy threads ----
 export OMP_NUM_THREADS=1
@@ -43,11 +43,11 @@ python worker.py \
     --SEED "$SEED"
 
 # ---- Log success or failure ----
-STATUS_FILE_SUCCESS="/global/home/hpc6129/optGME/optGME/paper2/FullRun/media/slurm_success.txt"
-STATUS_FILE_FAIL="/global/home/hpc6129/optGME/optGME/paper2/FullRun/media/slurm_fail.txt"
+STATUS_FILE_SUCCESS="/global/home/hpc6129/optGME/optGME/paper2/FieldRuns/media/slurm_success.txt"
+STATUS_FILE_FAIL="/global/home/hpc6129/optGME/optGME/paper2/FieldRuns/media/slurm_fail.txt"
 
 if [ $? -eq 0 ]; then
-    echo "${SLURM_JOB_ID},${SLURM_ARRAY_TASK_ID},${LOSS_INDEX},${NDBP_INDEX},${NG_INDEX},${SEED}" >> "$STATUS_FILE_SUCCESS"
+    echo "${SLURM_JOB_ID},${SLURM_ARRAY_TASK_ID},${LOSS_INDEX},${FIELD_INDEX},${NDBP_INDEX},${NG_INDEX},${SEED}" >> "$STATUS_FILE_SUCCESS"
 else
-    echo "${SLURM_JOB_ID},${SLURM_ARRAY_TASK_ID},${LOSS_INDEX},${NDBP_INDEX},${NG_INDEX},${SEED}" >> "$STATUS_FILE_FAIL"
+    echo "${SLURM_JOB_ID},${SLURM_ARRAY_TASK_ID},${LOSS_INDEX},${FIELD_INDEX},${NDBP_INDEX},${NG_INDEX},${SEED}" >> "$STATUS_FILE_FAIL"
 fi

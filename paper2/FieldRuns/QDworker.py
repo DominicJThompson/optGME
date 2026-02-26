@@ -111,7 +111,7 @@ if __name__=='__main__':
     else:
         add = 0
     for i in range(10):
-        path = f"media/ng{ngs_target[ngs_index]}/ndbp{ndbp_index}/loss_tests{loss_index}/field_tests{field_index}/test{i+add}"
+        path = f"media/QDs/ng{ngs_target[ngs_index]}/ndbp{ndbp_index}/loss_tests{loss_index}/field_tests{field_index}/test{i+add}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest[ndbp_index],'ngs_target':ngs_target[ngs_index],'ks_before':ks_before[ndbp_index],'ks_after':ks_after[ndbp_index],
                 'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[loss_index],'minPurcell':minPurcell[field_index]}
