@@ -4,14 +4,14 @@ import numpy as np
 
 
 #--------------------------------W1--------------------------------
-def W1(vars=npa.zeros((0,0)),NyChange=3,Ny=10,dslab=170/266,eps_slab=3.4638,ra=.3):
+def W1(vars=npa.zeros((0,0)),NyChange=3,Ny=10,dslab=170/266,eps_slab=3.4638,ra=.3,eps_clad=1):
 
     vars = vars.reshape((3,NyChange*2))
 
     lattice = legume.Lattice(npa.array([1,0]),npa.array([0,Ny*npa.sqrt(3)]))
 
     #now we define a photonic crystal that goes over our lattice and add the one layer of our W1 waveguide
-    phc = legume.PhotCryst(lattice)
+    phc = legume.PhotCryst(lattice,eps_l=eps_clad**2,eps_u=eps_clad**2)
     phc.add_layer(d=dslab,eps_b=eps_slab**2)
 
     for i in range(vars.shape[1]):
@@ -36,7 +36,7 @@ def W1(vars=npa.zeros((0,0)),NyChange=3,Ny=10,dslab=170/266,eps_slab=3.4638,ra=.
         y = iy*npa.sqrt(3)/2
 
         #now we can add a circle with the given positions
-        phc.add_shape(legume.Circle(x_cent=x,y_cent=y,r=ra))
+        phc.add_shape(legume.Circle(x_cent=x,y_cent=y,r=ra,eps=eps_clad**2))
 
     return(phc)
 

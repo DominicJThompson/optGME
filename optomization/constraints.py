@@ -246,6 +246,38 @@ class ConstraintManager(object):
             'args': {'minFreq': minFreq, 'maxFreq': maxFreq,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
             'type': 'constraint'
         }
+
+    def add_gme_constrs_QDs(self,name,minFreq=0,maxFreq=100,ksBefore=[0],ksAfter=[np.pi],bandwidth=.01,maxBackscatter=1,slope='down',backscatterParams={},minPurcell=0):
+        """
+        implements the folowing constraints:
+        freq_bound,
+        monotonic_band,
+        no overlapping bands
+        maximum allowable backscatter
+        In addition to adding ng sign constraints on the k points on either side
+
+        Args:
+            minFreq: minimum alowable frequency
+            maxFreq: maximum alowable frequency
+            ksBefore: a list of k values before the optomized kpoint
+            ksAfter: a list of k values after the optomized kpoint
+            bandwidth: The band should not be touching neighboring bands
+            maxBackscatter: maximum allowable backscatter units of [loss/ng^2 [dB/cm]]
+            minPurcell: minimum allowable purcell factor
+            slope: either 'up' or 'down' depending on the inital band
+        """
+
+
+        self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._gme_constrs_QDs,(ksBefore,ksAfter,bandwidth,slope,backscatterParams)),
+                                                     np.array([minFreq,-np.inf,-np.inf,0,minPurcell]),
+                                                     np.array([maxFreq,0,0,maxBackscatter,np.inf]),
+                                                     jac=self._wrap_grad(jacobian(self._gme_constrs_QDs),(ksBefore,ksAfter,bandwidth,slope,backscatterParams)),
+                                                     keep_feasible=[False,False,False,False,False])
+        self.constraintsDisc[name] = {
+            'discription': """implements the folowing constraints: freq_bound, monotonic_band, bandwidth""",
+            'args': {'minFreq': minFreq, 'maxFreq': maxFreq,'ksBefore': ksBefore, 'ksAfter': ksAfter, 'bandwidth': bandwidth, 'slope': slope},
+            'type': 'constraint'
+        }
     
     #----------functions that define default constraints----------
     
@@ -388,3 +420,64 @@ class ConstraintManager(object):
 
         #combine constraints and return
         return(bd.hstack((freq_start,monotonicOut,bandwidthOut,backscatterOut)))
+
+    def _gme_constrs_QDs(self,x,ksBefore,ksAfter,bandwidth,slope,backscatterParams):
+
+        #start by setting up GME and running it for all points 
+        phc = self.defaultArgs['crystal'](vars=x,**self.defaultArgs['phcParams'])
+        gme = legume.GuidedModeExp(phc,self.defaultArgs['gmax'])
+
+        #set up kpoints and run gme
+        gmeParams = self.defaultArgs['gmeParams'].copy()
+        kpointsBefore = bd.vstack((bd.array(ksBefore),len(ksBefore)*[0]))
+        kpointsAfter = bd.vstack((bd.array(ksAfter),len(ksAfter)*[0]))
+        kpoints = bd.hstack((kpointsBefore,gmeParams['kpoints'],kpointsAfter))
+        gmeParams['kpoints'] = kpoints
+        gmeParams['gmode_inds'] = self.defaultArgs['gmode_inds']
+        gmeParams['numeig'] = self.defaultArgs['gmeParams']['numeig']+1
+        gme.run(**gmeParams)
+
+        #get adjustment for slope that will be used repeatedly
+        if slope=='up':
+            c = 1
+        elif slope=='down':
+            c = -1
+        else:
+            raise ValueError("slope within ng bound must be either 'up' or 'down'")
+
+        #get frequency bound constraint
+        freq_start = gme.freqs[len(ksBefore),self.defaultArgs['mode']]
+        freq_end = gme.freqs[len(kpoints[0])-len(ksAfter)-1,self.defaultArgs['mode']]
+
+        #monotonic constraint
+        monotonic = c*(gme.freqs[:-1,self.defaultArgs['mode']]-gme.freqs[1:,self.defaultArgs['mode']])
+        monotonicOut = bd.max(monotonic)
+
+        #bandwidth constraint
+        above1 = bandwidth/2+freq_start-gme.freqs[-1,self.defaultArgs['mode']+1]
+        above2 = bandwidth/2+freq_start-gme.freqs[-2,self.defaultArgs['mode']+1]
+        below1 = bandwidth/2-freq_end+gme.freqs[0,self.defaultArgs['mode']-1]
+        below2 = bandwidth/2-freq_end+gme.freqs[1,self.defaultArgs['mode']-1]
+        bandwidthOut = bd.max(bd.hstack((above1,above2,below1,below2)))
+
+        #backscatter constraint
+        backscatters = []
+        for i in range(len(gmeParams['kpoints'][0])-len(ksAfter)-1):
+            backscatters.append(10**backscatterLog(gme,phc,self.defaultArgs['mode'],k=len(ksBefore)+i,**backscatterParams)/backscatterParams['a']/1E-7*10*np.log10(np.e))
+        backscatterOut = bd.max(backscatters)
+
+        #QD constraint
+        minPurcells = []
+        x_grid = np.linspace(-50/backscatterParams['a'],50/backscatterParams['a'],100)
+        y_grid = np.linspace(-50/backscatterParams['a'],50/backscatterParams['a'],100)
+        X,Y = np.meshgrid(x_grid,y_grid)
+        for i in range(len(gmeParams['kpoints'][0])-len(ksAfter)-1):
+            field,_,_ = gme.get_field_xy('E',len(ksBefore)+i,self.defaultArgs['mode'],gme.phc.layers[0].d/2,xgrid=x_grid,ygrid=y_grid)
+            cfields = (np.abs(field['y']*np.conj(field['y'])+field['x']*np.conj(field['x'])))
+            minfield = np.min(cfields[np.sqrt((X-0)**2+(Y-0)**2)<50/backscatterParams['a']])
+            minPurcell = minfield*3*np.pi*(299792458)**2*backscatterParams['a']*1E-9/(gme.freqs[i,14]*2*np.pi*299792458/(backscatterParams['a']*1E-9))**2/np.sqrt(12)/(backscatterParams['a']*1E-9)**3
+            minPurcells.append(minPurcell)
+        minPurcell = bd.min(minPurcells)
+
+        #combine constraints and return
+        return(bd.hstack((freq_start,monotonicOut,bandwidthOut,backscatterOut,minPurcell)))

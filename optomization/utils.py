@@ -175,11 +175,12 @@ def comp_backscatter(gme, phc, n, k, a=266, sig=3, lp=40, phidiv=45, zdiv=10):
 
     # calculate the leading coefficients for each of the holes
     cirleCoeffs = ((299792458 * 2 * npa.pi * gme.freqs[0, n]) * (sig / a) * (phc.layers[0].eps_b - 1) / 2) ** 2
+    cirleCoeffs *= (npa.pi)**2 #fixes the units
 
     # compute the final result
     alpha = bd.real(cirleCoeffs * npa.sum(intigral) * (phc.layers[0].d * a * 1e-9) ** 2 / zdiv)
     
-    return(alpha*266*1E-9) #this puts it in units of a^-1
+    return(alpha*a*1E-9) #this puts it in units of a^-1
 
 def backscatterLog(gme,phc,n,k=0,a=266,sig=3,lp=40,phidiv=45,zdiv=1):
     """

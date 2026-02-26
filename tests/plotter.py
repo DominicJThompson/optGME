@@ -714,14 +714,14 @@ print(len(ngW1))
 with open('/Users/dominic/Desktop/optGME/tests_old/media/ginds3/ziwBest.json','r') as file:
     out = json.load(file)
 
-#phcZIWmid,gmeZIWmid,alphasZIWmid,ngZIWmid = runSims(np.array([out[6]['x_values']]),ZIW,out[-1])
+phcZIWmid,gmeZIWmid,alphasZIWmid,ngZIWmid = runSims(np.array([out[6]['x_values']]),ZIW,out[-1])
 phcZIW,gmeZIW,alphasZIW,ngZIW = runSims(np.array(out[-1]['result']['x']),ZIW,out[-1])
 phcZIWOG,gmeZIWOG,alphasZIWOG,ngZIWOG = runSims(ZIWVars(),ZIW,out[-1]) 
 #%%
 with open('/Users/dominic/Desktop/optGME/tests_old/media/ginds3/W1Best.json','r') as file:
     out = json.load(file)
 
-#phcW1mid,gmeW1mid,alphasW1mid,ngW1mid = runSims(np.array([out[5]['x_values']]),W1,out[-1])
+phcW1mid,gmeW1mid,alphasW1mid,ngW1mid = runSims(np.array([out[5]['x_values']]),W1,out[-1])
 phcW1,gmeW1,alphasW1,ngW1 = runSims(np.array(out[-1]['result']['x']),W1,out[-1])
 phcW1OG,gmeW1OG,alphasW1OG,ngW1OG = runSims(W1Vars(),W1,out[-1]) 
 #%%
