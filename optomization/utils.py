@@ -125,7 +125,7 @@ def comp_pdote(gme,phc,n,borders,phis,k,zdiv=1):
     Epara = bd.array([-bd.sin(phis)*E[:,0],bd.cos(phis)*E[:,1]])
     Dperp = bd.array([bd.cos(phis)*D[:,0],bd.sin(phis)*D[:,1]])
 
-    p = Epara+(phc.layers[0].eps_b+1)*Dperp/(2*phc.layers[0].eps_b*1)
+    p = Epara+(phc.layers[0].eps_b+phc.get_eps_bounds()[0])*Dperp/(2*phc.layers[0].eps_b*phc.get_eps_bounds()[0])
 
     pdeR = bd.conj(E[:,0])*bd.conj(p[0])+bd.conj(E[:,1])*bd.conj(p[1])
     pdeRP = E[:,0]*p[0]+E[:,1]*p[1]
@@ -174,7 +174,7 @@ def comp_backscatter(gme, phc, n, k, a=266, sig=3, lp=40, phidiv=45, zdiv=10):
     intigral = npa.sum(intigrand, axis=(2, 3)) * weights
 
     # calculate the leading coefficients for each of the holes
-    cirleCoeffs = ((299792458 * 2 * npa.pi * gme.freqs[0, n]) * (sig / a) * (phc.layers[0].eps_b - 1) / 2) ** 2
+    cirleCoeffs = ((299792458 * 2 * npa.pi * gme.freqs[0, n]) * (sig / a) * (phc.layers[0].eps_b - phc.get_eps_bounds()[0]) / 2) ** 2
     cirleCoeffs *= (npa.pi)**2 #fixes the units
 
     # compute the final result
