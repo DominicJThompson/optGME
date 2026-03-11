@@ -7,7 +7,7 @@ import numpy as np
 import glob
 
 # Search for all raw_data.json files in the directory and any subdirectories under media/media/QDs
-qd_files = glob.glob(os.path.join('media', 'media', 'QDs', '**', 'raw_data.json'), recursive=True)
+qd_files = glob.glob(os.path.join('media', 'QDs', '**', 'raw_data.json'), recursive=True)
 print("Found raw_data.json files:", qd_files)
 
 for file in qd_files:
