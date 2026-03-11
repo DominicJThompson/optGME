@@ -75,17 +75,11 @@ if __name__=='__main__':
     parser.add_argument("--SEED", type=int)
     args = parser.parse_args()
 
-    # loss_index = args.LOSS_INDEX
-    # field_index = args.FIELD_INDEX
-    # ndbp_index = args.NDBP_INDEX
-    # ngs_index = args.NG_INDEX
-    # seed = args.SEED
-
-    loss_index = 0
-    field_index = 0
-    ndbp_index = 0
-    ngs_index = 0
-    seed = 420
+    loss_index = args.LOSS_INDEX
+    field_index = args.FIELD_INDEX
+    ndbp_index = args.NDBP_INDEX
+    ngs_index = args.NG_INDEX
+    seed = args.SEED
 
 
     np.random.seed(seed)
