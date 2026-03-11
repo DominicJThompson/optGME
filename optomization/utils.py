@@ -1,3 +1,4 @@
+from tkinter.constants import NONE
 import numpy as np
 import legume
 import autograd.numpy as npa
@@ -190,7 +191,7 @@ def backscatterLog(gme,phc,n,k=0,a=266,sig=3,lp=40,phidiv=45,zdiv=1):
 
     return(alpha)
 
-def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,final_cost=1e9,execution_time=0,niter=0):
+def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,final_cost=1e9,execution_time=0,niter=0,field=None):
     """
         Saves a figure with key information including the ng, dispersion, loss, and loss/ng^2
 
@@ -433,6 +434,38 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
     # calculate the true cost. The l1 difference between the mean ng and the calculated ng
     true_cost = np.sum(np.abs(ng[kind[0]:kind[-1]+1] - ng_mean))/(kind[-1]-kind[0]+1)
 
+    # save the field results if there are some
+    if field == 'QDs':
+        minPurcells = []
+        x_grid = np.linspace(-50/a,50/a,100)
+        y_grid = np.linspace(-50/a,50/a,100)
+        X,Y = np.meshgrid(x_grid,y_grid)
+        for ik in kind:
+            field,_,_ = gme.get_field_xy('E',ik,mode,gme.phc.layers[0].d/2,xgrid=x_grid,ygrid=y_grid)
+            cfields = (np.abs(field['y']*np.conj(field['y'])+field['x']*np.conj(field['x'])))
+            minfield = np.min(cfields[np.sqrt((X-0)**2+(Y-0)**2)<50/a])
+            minPurcell = minfield*3*np.pi*(299792458)**2*a*1E-9/(gme.freqs[ik,14]*2*np.pi*299792458/(a*1E-9))**2/np.sqrt(12)/(a*1E-9)**3
+            minPurcells.append(minPurcell)
+        field_result = bd.min(minPurcells)
+    elif field == 'MZMs':
+        minChanges = []
+        y_mid = np.sqrt(3)/2*4/10
+        y_away = np.sqrt(3)/2*5/10
+        dl = 2/a
+        x_grid = np.arange(-0.5,0.5,dl)
+        y_grid = np.hstack([np.arange(-y_away,-y_mid,dl),np.arange(y_mid,y_away,dl)])
+        for ik in kind:
+            tot = 0
+            for z in range(10):
+                field,_,_ = gme.get_field_xy('E',ik,mode,gme.phc.layers[0].d*z/10,xgrid=x_grid,ygrid=y_grid)
+                tot += bd.sum(np.abs(field['x'])**2+bd.abs(field['y'])**2)*dl**2*1e-4*gme.phc.layers[0].d/10
+            
+            minChanges.append(tot)
+        field_result = bd.min(minChanges)
+    else:
+        field_result = -1
+
+
     save_dict = {
         'ng':list(ng),
         'loss':list(loss),
@@ -448,6 +481,7 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
         'vars':vars.tolist(),
         'cost':final_cost,
         'true_cost':float(true_cost),
+        'field_result':float(field_result),
         'time':float(execution_time),
         'itterations':int(niter)
     }

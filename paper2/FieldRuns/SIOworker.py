@@ -42,7 +42,7 @@ def worker_function(input):
     minim = optomization.TrustConstr(vars,
                                     optomization.W1,cost,
                                     mode=14,
-                                    maxiter=500,
+                                    maxiter=2,
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
@@ -62,7 +62,8 @@ def worker_function(input):
                             a=input['a'],
                             final_cost=float(minim.result['fun']),
                             execution_time=minim.result['execution_time'],
-                            niter=minim.result['niter'])
+                            niter=minim.result['niter'],
+                            field='MZMs')
 #%%
 if __name__=='__main__':
     
