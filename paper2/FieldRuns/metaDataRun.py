@@ -12,7 +12,7 @@ print("Found raw_data.json files:", qd_files)
 
 for file in qd_files:
 
-    if file != 'media/media/QDs/ng30/ndbp2/loss_tests3/field_tests0/test7/raw_data.json':
+    if file != 'media/QDs/ng30/ndbp2/loss_tests3/field_tests0/test7/raw_data.json':
         continue
 
     with open(file, 'r') as f:
