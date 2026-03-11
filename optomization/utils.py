@@ -1,4 +1,3 @@
-from tkinter.constants import NONE
 import numpy as np
 import legume
 import autograd.numpy as npa
