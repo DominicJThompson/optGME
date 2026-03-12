@@ -42,7 +42,7 @@ def worker_function(input):
     minim = optomization.TrustConstr(vars,
                                     optomization.W1,cost,
                                     mode=14,
-                                    maxiter=2,
+                                    maxiter=500,
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
