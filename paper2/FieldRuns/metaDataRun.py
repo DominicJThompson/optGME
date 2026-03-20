@@ -6,13 +6,22 @@ import json
 import numpy as np 
 import glob
 
-print("running 1")
-# Search for all raw_data.json files in the directory and any subdirectories under media/media/QDs
-qd_files = glob.glob(os.path.join('media', 'QDs', '**', 'raw_data.json'), recursive=True)
-print("Found raw_data.json files:", qd_files)
-print("running")
+ng_index = int(os.environ.get("NG_INDEX", "0"))
+ndbp_index = int(os.environ.get("NDBP_INDEX", "0"))
 
-for file in qd_files:
+print(f"running metaDataRun.py for ng{ng_index} ndbp{ndbp_index}")
+
+# Search for all raw_data.json files in the directory and any subdirectories under media/QDs
+qd_files = glob.glob(os.path.join('media', 'QDs', '**', 'raw_data.json'), recursive=True)
+
+matching_files = [
+    file for file in qd_files
+    if f"ng{ng_index}" in file and f"ndbp{ndbp_index}" in file
+]
+
+print(f"Found {len(matching_files)} matching raw_data.json files")
+
+for file in matching_files:
 
     with open(file, 'r') as f:
         data = json.load(f)
@@ -21,11 +30,15 @@ for file in qd_files:
     except KeyError:
         print(f"KeyError for file: {file}")
         continue
-    print(file.rsplit('/', 1)[0]+'/meta_data.png')
+
+    output_dir = file.rsplit('/', 1)[0]
+    output_png = output_dir + '/meta_data.png'
+    print(output_png)
+
     opt.dispLossPlot(np.array(data[-1]['result']['x']),
                             opt.W1,
                             data[-1]['gmeParams']['kpoints'][0],
-                            file.rsplit('/', 1)[0]+'/meta_data.png',
+                            output_png,
                             gmax=4.01,
                             phcParams=data[-1]['phcParams'],
                             mode=14,
