@@ -42,7 +42,7 @@ for file in matching_files:
                             gmax=4.01,
                             phcParams=data[-1]['phcParams'],
                             mode=14,
-                            a=data[-1]['cost']['a'],
+                            a=455,
                             final_cost=data[-1]['result']['fun'],
                             execution_time=data[-1]['result']['execution_time'],
                             niter=data[-1]['result']['niter'],
