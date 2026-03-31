@@ -67,26 +67,20 @@ def worker_function(input):
 #%%
 if __name__=='__main__':
     
-    # #get the input values 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--LOSS_INDEX", type=int)
-    # parser.add_argument("--FIELD_INDEX", type=int)
-    # parser.add_argument("--NDBP_INDEX", type=int)
-    # parser.add_argument("--NG_INDEX", type=int)
-    # parser.add_argument("--SEED", type=int)
-    # args = parser.parse_args()
+    #get the input values 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--LOSS_INDEX", type=int)
+    parser.add_argument("--FIELD_INDEX", type=int)
+    parser.add_argument("--NDBP_INDEX", type=int)
+    parser.add_argument("--NG_INDEX", type=int)
+    parser.add_argument("--SEED", type=int)
+    args = parser.parse_args()
 
-    # loss_index = args.LOSS_INDEX
-    # field_index = args.FIELD_INDEX
-    # ndbp_index = args.NDBP_INDEX
-    # ngs_index = args.NG_INDEX
-    # seed = args.SEED
-
-    loss_index = 0
-    field_index = 0
-    ndbp_index = 0
-    ngs_index = 0
-    seed = 0
+    loss_index = args.LOSS_INDEX
+    field_index = args.FIELD_INDEX
+    ndbp_index = args.NDBP_INDEX
+    ngs_index = args.NG_INDEX
+    seed = args.SEED
 
     np.random.seed(seed)
     npa.random.seed(seed)
