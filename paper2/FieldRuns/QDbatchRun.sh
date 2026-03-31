@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=QD_FullRun
+#SBATCH --job-name=QD_FullRun_yDipole
 #SBATCH --output=logs/out_%A_%a.txt
 #SBATCH --error=logs/err_%A_%a.txt
 #SBATCH --array=1-450             # 450 jobs
 #SBATCH --time=13-23:50:00
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=10G
+#SBATCH --mem=15G
 
 # ---- Activate your virtual environment ----
 source "/global/home/hpc6129/optGME/.venv/bin/activate"

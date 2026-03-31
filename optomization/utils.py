@@ -440,8 +440,8 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
         y_grid = np.linspace(-50/a,50/a,100)
         X,Y = np.meshgrid(x_grid,y_grid)
         for ik in kind:
-            field,_,_ = gme.get_field_xy('E',ik,mode,gme.phc.layers[0].d/2,xgrid=x_grid,ygrid=y_grid)
-            cfields = (np.abs(field['y']*np.conj(field['y'])+field['x']*np.conj(field['x'])))
+            field,_,_ = gme.get_field_xy('E',ik,mode,gme.phc.layers[0].d/2,xgrid=x_grid,ygrid=y_grid,component='y')
+            cfields = np.abs(field['y']*np.conj(field['y']))
             minfield = np.min(cfields[np.sqrt((X-0)**2+(Y-0)**2)<50/a])
             minPurcell = minfield*3*np.pi*(299792458)**2*a*1E-9/(gme.freqs[ik,14]*2*np.pi*299792458/(a*1E-9))**2/np.sqrt(12)/(a*1E-9)**3
             minPurcells.append(minPurcell)

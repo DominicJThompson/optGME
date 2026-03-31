@@ -503,9 +503,9 @@ class ConstraintManager(object):
         x_grid = np.linspace(-50/backscatterParams['a'],50/backscatterParams['a'],100)
         y_grid = np.linspace(-50/backscatterParams['a'],50/backscatterParams['a'],100)
         X,Y = np.meshgrid(x_grid,y_grid)
-        for i in range(len(gmeParams['kpoints'][0])-len(ksAfter)-1):
-            field,_,_ = gme.get_field_xy('E',len(ksBefore)+i,self.defaultArgs['mode'],gme.phc.layers[0].d/2,xgrid=x_grid,ygrid=y_grid)
-            cfields = (np.abs(field['y']*np.conj(field['y'])+field['x']*np.conj(field['x'])))
+        for i in range(len(gmeParams['kpoints'][0])-len(ksAfter)-1): #compute the purcell factor for a dipole with y
+            field,_,_ = gme.get_field_xy('E',len(ksBefore)+i,self.defaultArgs['mode'],gme.phc.layers[0].d/2,xgrid=x_grid,ygrid=y_grid,component='y')
+            cfields = np.abs(field['y']*np.conj(field['y'])) #only the y component
             minfield = np.min(cfields[np.sqrt((X-0)**2+(Y-0)**2)<50/backscatterParams['a']])
             minPurcell = minfield*3*np.pi*(299792458)**2*backscatterParams['a']*1E-9/(gme.freqs[i,14]*2*np.pi*299792458/(backscatterParams['a']*1E-9))**2/np.sqrt(12)/(backscatterParams['a']*1E-9)**3
             minPurcells.append(minPurcell)
