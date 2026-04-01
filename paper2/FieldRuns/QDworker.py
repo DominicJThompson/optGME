@@ -33,7 +33,7 @@ def worker_function(input):
     
     manager.add_inside_unit_cell('Inside',.2)
     manager.add_rad_bound('minimumRadius',.15,.4)
-    manager.add_min_dist('minDist',40/455,3)
+    manager.add_min_dist('minDist',40/input['a'],3)
     manager.add_gme_constrs_QDs('gme_constrs',minFreq=input['minfreq'],maxFreq=.327,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
                                     bandwidth=.002,slope='down',maxBackscatter=input['maxBackscatter'],backscatterParams=backscatterParams,minPurcell=input['minPurcell'])
 
@@ -50,7 +50,11 @@ def worker_function(input):
                                     path=input['path']+'/raw_data.json',
                                     gmax=3.01,
                                     **tcParams)
-    minim.minimize()
+    try:
+        minim.minimize()
+    except ValueError:
+        print(f"Error in minimization for {input['path']}")
+        return None
     minim.save(input['path']+'/raw_data.json')
 
     optomization.dispLossPlot(np.array(minim.result["x"]),
@@ -81,6 +85,7 @@ if __name__=='__main__':
     ndbp_index = args.NDBP_INDEX
     ngs_index = args.NG_INDEX
     seed = args.SEED
+
 
     np.random.seed(seed)
     npa.random.seed(seed)
@@ -154,7 +159,7 @@ if __name__=='__main__':
         path = f"media/QDs_yDipole/ng{ngs_target[ngs_index]}/ndbp{ndbp_index}/loss_tests{loss_index}/field_tests{field_index}/test{i+add}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest[ndbp_index][ngs_index],'ngs_target':ngs_target[ngs_index],'ks_before':ks_before[ndbp_index][ngs_index],'ks_after':ks_after[ndbp_index][ngs_index],
-                'minfreq':minfreq,'a':405,'maxBackscatter':maxBackscatter[loss_index],'minPurcell':minPurcell[field_index]}
+                'minfreq':minfreq,'a':455,'maxBackscatter':maxBackscatter[loss_index],'minPurcell':minPurcell[field_index]}
         minim = worker_function(input)  # Compute the result
 
 # %%
