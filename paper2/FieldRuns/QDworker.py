@@ -67,7 +67,8 @@ def worker_function(input):
                             a=input['a'],
                             final_cost=float(minim.result['fun']),
                             execution_time=minim.result['execution_time'],
-                            niter=minim.result['niter'])
+                            niter=minim.result['niter'],
+                            field='QDs')
 #%%
 if __name__=='__main__':
     
