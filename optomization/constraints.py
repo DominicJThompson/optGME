@@ -3,11 +3,7 @@ from scipy.optimize import Bounds, NonlinearConstraint
 import autograd.numpy as np
 from autograd import grad,jacobian
 import legume.backend as bd
-from optomization.utils import NG, backscatterLog
-
-#temporary library
-import os
-import json
+from optomization.utils import NG, backscatterLog, AlphaDoping, Theta, AlphaBack
 
 
 class ConstraintManager(object):
@@ -279,7 +275,7 @@ class ConstraintManager(object):
             'type': 'constraint'
         }
 
-    def add_gme_constrs_MZMs(self,name,minFreq=0,maxFreq=100,ksBefore=[0],ksAfter=[np.pi],bandwidth=.01,maxBackscatter=1,slope='down',backscatterParams={},minChange=0):
+    def add_gme_constrs_MZMs(self,name,minFreq=0,maxFreq=100,ksBefore=[0],ksAfter=[np.pi],bandwidth=.01,maxLoss=1,slope='down',backscatterParams={},minTheta=0,dopingParams={},ng_target=30):
         """
         implements the folowing constraints:
         freq_bound,
@@ -300,10 +296,10 @@ class ConstraintManager(object):
         """
 
 
-        self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._gme_constrs_MZMs,(ksBefore,ksAfter,bandwidth,slope,backscatterParams)),
-                                                     np.array([minFreq,-np.inf,-np.inf,0,minChange]),
-                                                     np.array([maxFreq,0,0,maxBackscatter,np.inf]),
-                                                     jac=self._wrap_grad(jacobian(self._gme_constrs_MZMs),(ksBefore,ksAfter,bandwidth,slope,backscatterParams)),
+        self.constraints[name] = NonlinearConstraint(self._wrap_function_vector_out(self._gme_constrs_MZMs,(ksBefore,ksAfter,bandwidth,slope,backscatterParams,dopingParams,ng_target)),
+                                                     np.array([minFreq,-np.inf,-np.inf,0,minTheta]),
+                                                     np.array([maxFreq,0,0,maxLoss,np.inf]),
+                                                     jac=self._wrap_grad(jacobian(self._gme_constrs_MZMs),(ksBefore,ksAfter,bandwidth,slope,backscatterParams,dopingParams,ng_target)),
                                                      keep_feasible=[False,False,False,False,False])
         self.constraintsDisc[name] = {
             'discription': """implements the folowing constraints: freq_bound, monotonic_band, bandwidth""",
@@ -514,7 +510,7 @@ class ConstraintManager(object):
         #combine constraints and return
         return(bd.hstack((freq_start,monotonicOut,bandwidthOut,backscatterOut,minPurcell)))
 
-    def _gme_constrs_MZMs(self,x,ksBefore,ksAfter,bandwidth,slope,backscatterParams):
+    def _gme_constrs_MZMs(self,x,ksBefore,ksAfter,bandwidth,slope,backscatterParams,dopingParams,ng_target):
 
         #start by setting up GME and running it for all points 
         phc = self.defaultArgs['crystal'](vars=x,**self.defaultArgs['phcParams'])
@@ -553,27 +549,21 @@ class ConstraintManager(object):
         below2 = bandwidth/2-freq_end+gme.freqs[1,self.defaultArgs['mode']-1]
         bandwidthOut = bd.max(bd.hstack((above1,above2,below1,below2)))
 
-        #backscatter constraint
-        backscatters = []
+        #Loss constraint
+        LossOut = -1000
         for i in range(len(gmeParams['kpoints'][0])-len(ksAfter)-1):
-            backscatters.append(10**backscatterLog(gme,phc,self.defaultArgs['mode'],k=len(ksBefore)+i,**backscatterParams)/backscatterParams['a']/1E-7*10*np.log10(np.e))
-        backscatterOut = bd.max(backscatters)
+            alpha_back = AlphaBack(gme,mode=self.defaultArgs['mode'],k=len(ksBefore)+i,backscatterParams=backscatterParams,a=backscatterParams['a'])
+            alpha_doping = AlphaDoping(gme,mode=self.defaultArgs['mode'],k=len(ksBefore)+i,gap='f',a=backscatterParams['a'],dopingParams=dopingParams)
+            loss_tmp = 10*np.log10(np.exp(1))*(alpha_back*ng_target**2+alpha_doping*ng_target)
+            if loss_tmp > LossOut:
+                LossOut = loss_tmp
 
         #MZM constraint
-        minChanges = []
-        y_mid = np.sqrt(3)/2*4/10
-        y_away = np.sqrt(3)/2*5/10
-        dl = 2/backscatterParams['a']
-        x_grid = np.arange(-0.5,0.5,dl)
-        y_grid = np.hstack([np.arange(-y_away,-y_mid,dl),np.arange(y_mid,y_away,dl)])
+        minTheta = 1000
         for i in range(len(gmeParams['kpoints'][0])-len(ksAfter)-1):
-            tot = 0
-            for z in range(10):
-                field,_,_ = gme.get_field_xy('E',i,14,gme.phc.layers[0].d*z/10,xgrid=x_grid,ygrid=y_grid)
-                tot += bd.sum(np.abs(field['x'])**2+bd.abs(field['y'])**2)*dl**2*1e-4*gme.phc.layers[0].d/10
-            
-            minChanges.append(tot)
-        minChange = bd.min(minChanges)
-
+            theta_tmp = bd.abs(Theta(gme,mode=self.defaultArgs['mode'],k=len(ksBefore)+i,a=backscatterParams['a'],dopingParams=dopingParams))
+            if theta_tmp < minTheta:
+                minTheta = theta_tmp
+        print(freq_start,monotonicOut,bandwidthOut,LossOut,minTheta)
         #combine constraints and return
-        return(bd.hstack((freq_start,monotonicOut,bandwidthOut,backscatterOut,minChange)))
+        return(bd.hstack((freq_start,monotonicOut,bandwidthOut,LossOut,minTheta)))

@@ -190,7 +190,79 @@ def backscatterLog(gme,phc,n,k=0,a=266,sig=3,lp=40,phidiv=45,zdiv=1):
 
     return(alpha)
 
-def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,final_cost=1e9,execution_time=0,niter=0,field=None):
+# ------------------------ MZM Specific Functions ------------------------
+#calculates delta phi/ng
+def Theta(gme=None,mode=14,k=0,a=390,dopingParams={}):
+
+    #set up the spatial positions array for the regions where the carrier conentration changes
+    y_grid = npa.hstack((
+                        npa.arange(-dopingParams['wf'],-dopingParams['wi'],dopingParams['dl']),
+                        npa.arange(dopingParams['wi'],dopingParams['wf'],dopingParams['dl'])
+    ))
+    x_grid = npa.arange(-0.5,0.5,dopingParams['dl'])
+
+    #set up hole and electron densities
+    n = npa.zeros_like(y_grid)
+    p = npa.zeros_like(y_grid)
+    n[y_grid<0] = dopingParams['Ne']
+    p[y_grid>0] = dopingParams['Nh']
+
+    #get the dn values from the dopings, dn_f is zero for the whole region we check
+    dn = -(-5.4*10**-22*n**1.011-1.53*10**-18*p**0.838)
+
+    #get the field
+    dn_eq = 0
+    for z in range(dopingParams['zdiv']):
+        field,_,_ = gme.get_field_xy('E',k,14,gme.phc.layers[0].d*z/dopingParams['zdiv'],xgrid=x_grid,ygrid=y_grid)
+        intagrand = npa.sum((npa.abs(field['x'])**2+npa.abs(field['y'])**2)*dn[:,npa.newaxis])*np.sqrt(gme.phc.get_eps_bounds()[1]) #preform integration
+        dn_eq += intagrand*dopingParams['dl']**2*gme.phc.layers[0].d/dopingParams['zdiv'] #multiply by the dV
+    
+    #compute k_0 and n_eq
+    k_0 = 2*np.pi/(a*10**-9)*gme.freqs[k,mode]/1000 #in mm^-1
+
+    return dn_eq*k_0
+
+#returns the backscattering loss in cm^-1
+def AlphaBack(gme=None,mode=14,k=0,backscatterParams={},a=390,**kwargs):
+    out = backscatterLog(gme,gme.phc,mode,k=k,**backscatterParams)
+    return 10**out/a/1E-7
+
+#reuturns the loss from doping in cm^-1
+def AlphaDoping(gme=None,mode=14,k=0,dopingParams={},gap='i',**kwargs):
+
+    #set up the spacial positions where we want to compute the alpha
+    y_grid = npa.arange(-dopingParams['max_y'],dopingParams['max_y'],dopingParams['dl'])
+    x_grid = npa.arange(-0.5,0.5,dopingParams['dl'])
+    
+    #set up hole and electron densities
+    n = npa.zeros_like(y_grid)
+    p = npa.zeros_like(y_grid)
+    if gap == 'i':
+        n[y_grid<-dopingParams['wi']] = dopingParams['Ne']
+        p[y_grid>dopingParams['wi']] = dopingParams['Nh']
+    elif gap == 'f':
+        n[y_grid<-dopingParams['wf']] = dopingParams['Ne']
+        p[y_grid>dopingParams['wf']] = dopingParams['Nh']
+
+    #get the alpha values from the dopings
+    alpha = 8.88*10**-21*n**1.167+5.84*10**-20*p**1.109
+
+    #get epsilon mask, doping only exists in silicon
+    eps_mask,_,_ = gme.get_eps_xy(z=gme.phc.layers[0].d/2,xgrid=x_grid,ygrid=y_grid)
+    eps_mask = npa.abs(eps_mask)
+    eps_mask = npa.where(eps_mask < 10, 0, eps_mask)
+    eps_mask = npa.where(eps_mask >= 10, 1, eps_mask)
+
+    #compute over the integral 
+    dalpha_eq = 0
+    for z in range(dopingParams['zdiv']):
+        field,_,_ = gme.get_field_xy('E',k,14,gme.phc.layers[0].d*z/dopingParams['zdiv'],xgrid=x_grid,ygrid=y_grid)
+        dalpha_eq += npa.sum((npa.abs(field['x'])**2+npa.abs(field['y'])**2)*alpha[:,npa.newaxis]*eps_mask)*np.sqrt(gme.phc.get_eps_bounds()[1])/2 #preform integration
+        dalpha_eq *= dopingParams['dl']**2*gme.phc.layers[0].d/dopingParams['zdiv'] #multiply by the dV
+
+    return dalpha_eq
+
+def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,final_cost=1e9,execution_time=0,niter=0,field=None,backscatterParams={},dopingParams={}):
     """
         Saves a figure with key information including the ng, dispersion, loss, and loss/ng^2
 
@@ -220,12 +292,19 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
     gme = legume.GuidedModeExp(phc,gmax)
     gme.run(**gmeParams)    
 
-    #run ng and loss
     ng = []
     loss = []
-    for i in range(len(ks)):
-        ng.append(np.abs(NG(gme,i,mode,Nx=100,Ny=125)))
-        loss.append(10**backscatterLog(gme,phc,mode,k=i,a=a,zdiv=10)/a/1E-7*10*np.log10(np.e)*ng[-1]**2)
+    #run ng and loss
+    if field == 'MZMs': #this saves loss from ng and doping for MZMs in units of dB/cm
+        for i in range(len(ks)):
+            ng.append(np.abs(NG(gme,i,mode,Nx=100,Ny=125)))
+            alpha_back = AlphaBack(gme,mode=mode,k=i,backscatterParams=backscatterParams,a=a)
+            alpha_doping = AlphaDoping(gme,mode=mode,k=i,dopingParams=dopingParams,gap='i',a=a)
+            loss.append(10*np.log10(np.exp(1))*(alpha_back*ng[-1]**2+alpha_doping*ng[-1]))
+    else: #this saves loss when it is only from backscattering in units of dB/cm
+        for i in range(len(ks)):
+            ng.append(np.abs(NG(gme,i,mode,Nx=100,Ny=125)))
+            loss.append(10**backscatterLog(gme,phc,mode,k=i,**backscatterParams)/a/1E-7*10*np.log10(np.e)*ng[-1]**2)
     ng = np.array(ng)
     loss = np.array(loss)
     
@@ -447,20 +526,10 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
             minPurcells.append(minPurcell)
         field_result = bd.min(minPurcells)
     elif field == 'MZMs':
-        minChanges = []
-        y_mid = np.sqrt(3)/2*4/10
-        y_away = np.sqrt(3)/2*5/10
-        dl = 2/a
-        x_grid = np.arange(-0.5,0.5,dl)
-        y_grid = np.hstack([np.arange(-y_away,-y_mid,dl),np.arange(y_mid,y_away,dl)])
+        minThetas = []
         for ik in kind:
-            tot = 0
-            for z in range(10):
-                field,_,_ = gme.get_field_xy('E',ik,mode,gme.phc.layers[0].d*z/10,xgrid=x_grid,ygrid=y_grid)
-                tot += bd.sum(np.abs(field['x'])**2+bd.abs(field['y'])**2)*dl**2*1e-4*gme.phc.layers[0].d/10
-            
-            minChanges.append(tot)
-        field_result = bd.min(minChanges)
+            minThetas.append(Theta(gme,mode=14,k=ik,a=a,dopingParams=dopingParams))
+        field_result = bd.min(minThetas)
     else:
         field_result = -1
 
@@ -484,6 +553,9 @@ def dispLossPlot(vars,crystal,kpoints,path,gmax=4.01,phcParams={},mode=14,a=455,
         'time':float(execution_time),
         'itterations':int(niter)
     }
+    if field == 'MZMs':
+        save_dict['alpha_back'] = float(alpha_back)
+        save_dict['alpha_doping'] = float(alpha_doping)
 
     with open(path.replace('.png','.json'), 'w') as f:
         json.dump(save_dict, f, indent=4)

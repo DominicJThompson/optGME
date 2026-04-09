@@ -18,6 +18,7 @@ def worker_function(input):
     gmeParams = {'verbose':False,'numeig':15,'compute_im':False,'gmode_inds':[0],'kpoints':np.vstack([input['ks_interest'],[0]*len(input['ks_interest'])])}
     phcParams = {"Ny":7,"dslab":220/input['a'],"eps_slab":3.4784,'eps_clad':1.44427}
     backscatterParams = {'a':input['a'],'sig':3,'lp':40,'phidiv':45,'zdiv':10}
+    dopingParams = {'wi':32/input['a'],'wf':113/input['a'],'Ne':1E18,'Nh':1e18,'dl':4/input['a'],'zdiv':15,'max_y':3*np.sqrt(3)/2}
     vars = optomization.W1Vars(key=input['key'])
     
     #define constraints
@@ -34,7 +35,8 @@ def worker_function(input):
     manager.add_rad_bound('minimumRadius',.15,.4)
     manager.add_min_dist('minDist',40/input['a'],3)
     manager.add_gme_constrs_MZMs('gme_constrs',minFreq=input['minfreq'],maxFreq=.28,ksBefore=input['ks_before'],ksAfter=input['ks_after'],
-                                    bandwidth=.002,slope='down',maxBackscatter=input['maxBackscatter'],backscatterParams=backscatterParams,minChange=input['minChange'])
+                                    bandwidth=.002,slope='down',maxLoss=input['maxLoss'],backscatterParams=backscatterParams,minTheta=input['minTheta'],
+                                    dopingParams=dopingParams,ng_target=input['ng_target'])
 
 
     #run minimization
@@ -42,7 +44,7 @@ def worker_function(input):
     minim = optomization.TrustConstr(vars,
                                     optomization.W1,cost,
                                     mode=14,
-                                    maxiter=500,
+                                    maxiter=2,
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
@@ -63,24 +65,32 @@ def worker_function(input):
                             final_cost=float(minim.result['fun']),
                             execution_time=minim.result['execution_time'],
                             niter=minim.result['niter'],
-                            field='MZMs')
+                            field='MZMs',
+                            backscatterParams=backscatterParams,
+                            dopingParams=dopingParams)
 #%%
 if __name__=='__main__':
     
-    #get the input values 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--LOSS_INDEX", type=int)
-    parser.add_argument("--FIELD_INDEX", type=int)
-    parser.add_argument("--NDBP_INDEX", type=int)
-    parser.add_argument("--NG_INDEX", type=int)
-    parser.add_argument("--SEED", type=int)
-    args = parser.parse_args()
+    # #get the input values 
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("--LOSS_INDEX", type=int)
+    # parser.add_argument("--FIELD_INDEX", type=int)
+    # parser.add_argument("--NDBP_INDEX", type=int)
+    # parser.add_argument("--NG_INDEX", type=int)
+    # parser.add_argument("--SEED", type=int)
+    # args = parser.parse_args()
 
-    loss_index = args.LOSS_INDEX
-    field_index = args.FIELD_INDEX
-    ndbp_index = args.NDBP_INDEX
-    ngs_index = args.NG_INDEX
-    seed = args.SEED
+    # loss_index = args.LOSS_INDEX
+    # field_index = args.FIELD_INDEX
+    # ndbp_index = args.NDBP_INDEX
+    # ngs_index = args.NG_INDEX
+    # seed = args.SEED
+
+    seed = 420
+    ndbp_index = 0
+    loss_index = 0
+    field_index = 0
+    ngs_index = 0
 
 
     np.random.seed(seed)
@@ -88,9 +98,9 @@ if __name__=='__main__':
     ks = list(np.linspace(npa.pi*.5,npa.pi,200))
 
     ks_interest = ks_array = [
-        [ks[120], ks[127], ks[134], ks[141], ks[149], ks[156], ks[163], ks[171]],
-        [ks[108], ks[118], ks[129], ks[140], ks[150], ks[161], ks[172], ks[183]],
-        [ks[95], ks[109], ks[123], ks[138], ks[152], ks[167], ks[181], ks[196]],
+        [ks[120], ks[127], ks[134], ks[141], ks[149], ks[156], ks[163], ks[171]], #NDBP = 0.25
+        [ks[115], ks[123], ks[132], ks[141], ks[159], ks[158], ks[167], ks[176]], #NDBP = 0.3
+        [ks[110], ks[120], ks[130], ks[140], ks[150], ks[160], ks[170], ks[181]], #NDBP = 0.35
     ]
     ks_before = [
         [ks[32], ks[65]],
@@ -99,24 +109,33 @@ if __name__=='__main__':
     ]
     ks_after = [
         [ks[186], ks[199]],
-        [ks[192], ks[199]],
-        [ks[198], ks[199]],
+        [ks[188], ks[199]],
+        [ks[190], ks[199]],
     ]
 
     ngs_target = [10,20,30]
     minfreq = .248
-    maxBackscatter = [0.0025,0.005,0.01,0.015,0.02]
-    minChange = [0.9*1e-7,0.75*1e-7,0.6*1e-7,0.45*1e-7,0.3*1e-7]
+    maxLosses = {0:[25,20,15,10,5],
+                1:[12,10,8,6,4],
+                2:[3.5,3,2.5,2,1.5]}
+    minThetas = [0.7,0.6,0.5,0.4,0.3]
+
+    print(maxLosses[ndbp_index][loss_index])
+    print(minThetas[field_index])
+    print(ngs_target[ngs_index])
+    print(ks_interest[ndbp_index])
+    print(ks_before[ndbp_index])
+    print(ks_after[ndbp_index])
 
     if seed == 420:
         add = 10
     else:
         add = 0
     for i in range(10):
-        path = f"media/MZMs/ng{ngs_target[ngs_index]}/ndbp{ndbp_index}/loss_tests{loss_index}/field_tests{field_index}/test{i+add}"
+        path = f"media/MZM_totLoss/ng{ngs_target[ngs_index]}/ndbp{ndbp_index}/loss_tests{loss_index}/field_tests{field_index}/test{i+add}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
                 'key':i,'ks_interest':ks_interest[ndbp_index],'ngs_target':ngs_target[ngs_index],'ks_before':ks_before[ndbp_index],'ks_after':ks_after[ndbp_index],
-                'minfreq':minfreq,'a':390,'maxBackscatter':maxBackscatter[loss_index],'minChange':minChange[field_index]}
+                'minfreq':minfreq,'a':390,'maxLoss':maxLosses[ndbp_index][loss_index],'minTheta':minThetas[field_index],'ng_target':ngs_target[ngs_index]}
         minim = worker_function(input)  # Compute the result
 
 # %%
