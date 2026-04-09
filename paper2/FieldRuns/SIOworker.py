@@ -116,9 +116,9 @@ if __name__=='__main__':
 
     if seed == 420:
         add = 5
-    if seed == 69:
+    elif seed == 69:
         add = 10
-    if seed == 67:
+    elif seed == 67:
         add = 15
     else:
         add = 0
