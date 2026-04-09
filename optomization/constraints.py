@@ -564,6 +564,6 @@ class ConstraintManager(object):
             theta_tmp = bd.abs(Theta(gme,mode=self.defaultArgs['mode'],k=len(ksBefore)+i,a=backscatterParams['a'],dopingParams=dopingParams))
             if theta_tmp < minTheta:
                 minTheta = theta_tmp
-        print(freq_start,monotonicOut,bandwidthOut,LossOut,minTheta)
+                
         #combine constraints and return
         return(bd.hstack((freq_start,monotonicOut,bandwidthOut,LossOut,minTheta)))

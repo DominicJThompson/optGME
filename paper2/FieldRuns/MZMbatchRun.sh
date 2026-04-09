@@ -2,7 +2,7 @@
 #SBATCH --job-name=MZM_FullRun
 #SBATCH --output=logs/out_%A_%a.txt
 #SBATCH --error=logs/err_%A_%a.txt
-#SBATCH --array=1-450             # 450 jobs
+#SBATCH --array=1-900             # 450 jobs
 #SBATCH --time=13-23:50:00
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=20G
@@ -11,7 +11,7 @@
 source "/global/home/hpc6129/optGME/.venv/bin/activate"
 
 # Path to your CSV
-CSV_FILE="data/MZMs_arrayInputs.csv"
+CSV_FILE="data/MZMs_fullLoss_arrayInputs.csv"
 
 # Extract the row corresponding to this array index.
 INPUT_LINE=$(awk -v idx="$SLURM_ARRAY_TASK_ID" 'NR==idx+1' $CSV_FILE)

@@ -17,8 +17,8 @@ def worker_function(input):
 
     gmeParams = {'verbose':False,'numeig':15,'compute_im':False,'gmode_inds':[0],'kpoints':np.vstack([input['ks_interest'],[0]*len(input['ks_interest'])])}
     phcParams = {"Ny":7,"dslab":220/input['a'],"eps_slab":3.4784,'eps_clad':1.44427}
-    backscatterParams = {'a':input['a'],'sig':3,'lp':40,'phidiv':45,'zdiv':10}
-    dopingParams = {'wi':32/input['a'],'wf':113/input['a'],'Ne':1E18,'Nh':1e18,'dl':4/input['a'],'zdiv':15,'max_y':3*np.sqrt(3)/2}
+    backscatterParams = {'a':input['a'],'sig':3,'lp':40,'phidiv':45,'zdiv':15}
+    dopingParams = {'wi':32/input['a'],'wf':113/input['a'],'Ne':1E18,'Nh':1e18,'dl':14/input['a'],'zdiv':15,'max_y':4*np.sqrt(3)/2}
     vars = optomization.W1Vars(key=input['key'])
     
     #define constraints
@@ -44,7 +44,7 @@ def worker_function(input):
     minim = optomization.TrustConstr(vars,
                                     optomization.W1,cost,
                                     mode=14,
-                                    maxiter=2,
+                                    maxiter=500,
                                     gmeParams=gmeParams,
                                     phcParams=phcParams,
                                     constraints=manager,
@@ -71,26 +71,20 @@ def worker_function(input):
 #%%
 if __name__=='__main__':
     
-    # #get the input values 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--LOSS_INDEX", type=int)
-    # parser.add_argument("--FIELD_INDEX", type=int)
-    # parser.add_argument("--NDBP_INDEX", type=int)
-    # parser.add_argument("--NG_INDEX", type=int)
-    # parser.add_argument("--SEED", type=int)
-    # args = parser.parse_args()
+    #get the input values 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--LOSS_INDEX", type=int)
+    parser.add_argument("--FIELD_INDEX", type=int)
+    parser.add_argument("--NDBP_INDEX", type=int)
+    parser.add_argument("--NG_INDEX", type=int)
+    parser.add_argument("--SEED", type=int)
+    args = parser.parse_args()
 
-    # loss_index = args.LOSS_INDEX
-    # field_index = args.FIELD_INDEX
-    # ndbp_index = args.NDBP_INDEX
-    # ngs_index = args.NG_INDEX
-    # seed = args.SEED
-
-    seed = 420
-    ndbp_index = 0
-    loss_index = 0
-    field_index = 0
-    ngs_index = 0
+    loss_index = args.LOSS_INDEX
+    field_index = args.FIELD_INDEX
+    ndbp_index = args.NDBP_INDEX
+    ngs_index = args.NG_INDEX
+    seed = args.SEED
 
 
     np.random.seed(seed)
@@ -120,21 +114,18 @@ if __name__=='__main__':
                 2:[3.5,3,2.5,2,1.5]}
     minThetas = [0.7,0.6,0.5,0.4,0.3]
 
-    print(maxLosses[ndbp_index][loss_index])
-    print(minThetas[field_index])
-    print(ngs_target[ngs_index])
-    print(ks_interest[ndbp_index])
-    print(ks_before[ndbp_index])
-    print(ks_after[ndbp_index])
-
     if seed == 420:
+        add = 5
+    if seed == 69:
         add = 10
+    if seed == 67:
+        add = 15
     else:
         add = 0
-    for i in range(10):
+    for i in range(5):
         path = f"media/MZM_totLoss/ng{ngs_target[ngs_index]}/ndbp{ndbp_index}/loss_tests{loss_index}/field_tests{field_index}/test{i+add}"
         input = {'path':path,'tcParams':{'xtol':1e-3,'initial_tr_radius':.1,'initial_barrier_parameter':.1,'initial_constr_penalty':.1},
-                'key':i,'ks_interest':ks_interest[ndbp_index],'ngs_target':ngs_target[ngs_index],'ks_before':ks_before[ndbp_index],'ks_after':ks_after[ndbp_index],
+                'key':add+i,'ks_interest':ks_interest[ndbp_index],'ngs_target':ngs_target[ngs_index],'ks_before':ks_before[ndbp_index],'ks_after':ks_after[ndbp_index],
                 'minfreq':minfreq,'a':390,'maxLoss':maxLosses[ndbp_index][loss_index],'minTheta':minThetas[field_index],'ng_target':ngs_target[ngs_index]}
         minim = worker_function(input)  # Compute the result
 
